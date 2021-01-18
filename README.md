@@ -1,1 +1,1 @@
-# marginalized-hmms
+# mhmms
