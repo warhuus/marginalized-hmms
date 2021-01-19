@@ -16,7 +16,7 @@ from . import train
 
 def main():
 
-    NUM_OBSERVATIONS = 10000
+    NUM_OBSERVATIONS = 500
     NUM_DIMENSIONS = 10
     NUM_STATES = 5
     RANK_COVARIANCE = 0
@@ -63,10 +63,10 @@ def main():
                                                 device, batch_size, optimizer)
         Lr[i] = L_.detach().cpu().numpy()
 
-        # plot every n_plot iterations
-        if ((i + 1) % N_PLOT) == 0:
-            plot.diagnostics(X0, ulog_T, ulog_t0, log_T, log_t0, M, V, S,
-                             NUM_OBSERVATIONS, NUM_STATES, Lr, device)
+    # plot every n_plot iterations
+    if ((i + 1) % N_PLOT) == 0:
+        plot.diagnostics(X0, ulog_T, ulog_t0, log_T, log_t0, M, V, S,
+                            NUM_OBSERVATIONS, NUM_STATES, Lr, device)
         
     plt.show()
    
