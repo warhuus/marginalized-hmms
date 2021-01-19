@@ -1,6 +1,8 @@
+#%%
 import os
 import pickle
 import datetime
+import types
 
 import numpy as np
 import torch
@@ -14,47 +16,59 @@ from . import train
 
 def main():
 
-    NUM_OBSERVATIONS = 250
+    NUM_OBSERVATIONS = 10000
     NUM_DIMENSIONS = 10
     NUM_STATES = 5
     RANK_COVARIANCE = 0
-    BS = 10                 # batch size
-    R = 1000                # number of iterations
-    N_PLOT = 50             # plot every n_plot iterations
+    STATE_LENGTH = 2
+    VARIANCE = 0.1
+    N_PLOT = 2              # plot every n_plot iterations
+
+    assert (NUM_OBSERVATIONS // (NUM_STATES * STATE_LENGTH)) % 1 == 0
+
+    batch_size = NUM_STATES * STATE_LENGTH
+    lengths = [batch_size] * (NUM_OBSERVATIONS // batch_size)
+
+    assert isinstance(lengths, list)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # make dummy data
-    X0 = data.create(NUM_OBSERVATIONS, NUM_STATES, NUM_DIMENSIONS)
+    X0 = data.create(
+            NUM_OBSERVATIONS, NUM_STATES, NUM_DIMENSIONS, STATE_LENGTH, VARIANCE)
     X0 = X0.to(device)
+    data_iter = train.make_iter(lengths)
+
+    assert isinstance(data_iter, types.GeneratorType)
 
     # init params, optimizer, minibatch log-likelihood
     par = {'requires_grad': True, 'dtype': torch.float32, 'device': device}
     params = train.init_params(NUM_STATES, NUM_DIMENSIONS, RANK_COVARIANCE, par)
     optimizer = torch.optim.Adam(params, lr=0.05)
-    Lr = np.empty(R)
+    Lr = np.empty(len(lengths))
 
     # get params
     ulog_T, ulog_t0, M, V, S = params
 
-    for r in range(R):
+    for i, (start, end) in enumerate(data_iter):
 
         # get batch
-        i0 = np.random.randint(NUM_OBSERVATIONS - BS + 1)
-        X = X0[:, i0:i0+BS]
+        X = X0[:, range(start, end)]
 
         # normalize log transition matrix
         log_T = ulog_T - ops.logsum(ulog_T, dim=0)
         log_t0 = ulog_t0 - ops.logsum(ulog_t0)
 
         L_, log_T, log_t0, M, V, S = train.step(X, log_T, log_t0, M, V, S,
-                                                device, BS, optimizer)
-        Lr[r] = L_.detach().cpu().numpy()
+                                                device, batch_size, optimizer)
+        Lr[i] = L_.detach().cpu().numpy()
 
         # plot every n_plot iterations
-        if ((r + 1) % N_PLOT) == 0:
+        if ((i + 1) % N_PLOT) == 0:
             plot.diagnostics(X0, ulog_T, ulog_t0, log_T, log_t0, M, V, S,
-                             NUM_OBSERVATIONS, NUM_STATES, Lr,   device)
+                             NUM_OBSERVATIONS, NUM_STATES, Lr, device)
+        
+    plt.show()
    
     now = datetime.datetime.now()
 

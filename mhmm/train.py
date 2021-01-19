@@ -47,6 +47,16 @@ def step(X, log_T, log_t0, M, V, S, device, batch_size, optimizer):
 
     return L_return, log_T, log_t0, M, V, S
 
+def make_iter(lengths):
+
+    assert isinstance(lengths, list)
+
+    end = np.cumsum(lengths).astype(np.int32)
+    start = end - lengths
+
+    for i in range(len(lengths)):
+        yield start[i], end[i]
+
 
 def hmm_step():
     NotImplementedError
