@@ -36,15 +36,19 @@ def main():
     # make dummy data
     X0 = data.create(
             NUM_OBSERVATIONS, NUM_STATES, NUM_DIMENSIONS, STATE_LENGTH, VARIANCE)
-    X0 = X0.to(device)
+
     data_iter = train.make_iter(lengths)
 
     assert isinstance(data_iter, types.GeneratorType)
+
+# --- specific to mhmm ---
 
     # init params, optimizer, minibatch log-likelihood
     par = {'requires_grad': True, 'dtype': torch.float32, 'device': device}
     params = train.init_params(NUM_STATES, NUM_DIMENSIONS, RANK_COVARIANCE, par)
     optimizer = torch.optim.Adam(params, lr=0.05)
+    X0 = X0.to(device)
+
     Lr = np.empty(len(lengths))
 
     # get params
@@ -62,6 +66,8 @@ def main():
         L_, log_T, log_t0, M, V, S = train.step(X, log_T, log_t0, M, V, S,
                                                 device, batch_size, optimizer)
         Lr[i] = L_.detach().cpu().numpy()
+
+# --- specific to mhmm ---
 
     # plot every n_plot iterations
     if ((i + 1) % N_PLOT) == 0:
