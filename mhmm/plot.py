@@ -18,8 +18,8 @@ def toy_data(X0):
     drawnow()
 
 
-def diagnostics(X0, ulog_T, ulog_t0, log_T, log_t0, M, V, S,
-                num_observations, num_states, Lr, device):
+def diagnostics(Lr, log_T, log_t0, ulog_T, ulog_t0, M, V, S,
+                X0, num_observations, num_states, device):
     # log likelihood
     plt.figure('Objective').clf()
     plt.plot(Lr)
@@ -54,7 +54,7 @@ def diagnostics(X0, ulog_T, ulog_t0, log_T, log_t0, M, V, S,
     plt.clf()
     log_T = ulog_T - ops.logsum(ulog_T, dim=1)
     log_t0 = ulog_t0 - ops.logsum(ulog_t0)
-    E = train.calc_loglik(X0.to(device), M, V, S, device)
+    E = train.marghmm.calc_loglik(X0.to(device), M, V, S, device)
 
     log_p = log_t0
     log_p_n = np.zeros((num_observations, num_states))

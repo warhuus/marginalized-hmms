@@ -14,7 +14,7 @@ from . import data
 from . import train
 
 
-def main():
+def main(model):
 
     NUM_OBSERVATIONS = 500
     NUM_DIMENSIONS = 10
@@ -37,52 +37,25 @@ def main():
     X0 = data.create(
             NUM_OBSERVATIONS, NUM_STATES, NUM_DIMENSIONS, STATE_LENGTH, VARIANCE)
 
-    data_iter = train.make_iter(lengths)
+    # train
+    if model == "marginalized-hmm":
+        output = train.marghmm.run( 
+            X0, NUM_STATES, NUM_DIMENSIONS, RANK_COVARIANCE, device, batch_size, lengths)
+    else:
+        raise NotImplementedError("the indicated model is not yet implemented")
 
-    assert isinstance(data_iter, types.GeneratorType)
-
-# --- specific to mhmm ---
-
-    # init params, optimizer, minibatch log-likelihood
-    par = {'requires_grad': True, 'dtype': torch.float32, 'device': device}
-    params = train.init_params(NUM_STATES, NUM_DIMENSIONS, RANK_COVARIANCE, par)
-    optimizer = torch.optim.Adam(params, lr=0.05)
-    X0 = X0.to(device)
-
-    Lr = np.empty(len(lengths))
-
-    # get params
-    ulog_T, ulog_t0, M, V, S = params
-
-    for i, (start, end) in enumerate(data_iter):
-
-        # get batch
-        X = X0[:, range(start, end)]
-
-        # normalize log transition matrix
-        log_T = ulog_T - ops.logsum(ulog_T, dim=0)
-        log_t0 = ulog_t0 - ops.logsum(ulog_t0)
-
-        L_, log_T, log_t0, M, V, S = train.step(X, log_T, log_t0, M, V, S,
-                                                device, batch_size, optimizer)
-        Lr[i] = L_.detach().cpu().numpy()
-
-# --- specific to mhmm ---
-
-    # plot every n_plot iterations
-    if ((i + 1) % N_PLOT) == 0:
-        plot.diagnostics(X0, ulog_T, ulog_t0, log_T, log_t0, M, V, S,
-                            NUM_OBSERVATIONS, NUM_STATES, Lr, device)
-        
+    # plot
+    plot.diagnostics(*output, X0, NUM_OBSERVATIONS, NUM_STATES, device)
     plt.show()
    
+    # save
     now = datetime.datetime.now()
 
     path = os.path.join(os.getcwd(), "output", now.strftime("%m_%d"))
     if not os.path.isdir(path):
         os.mkdir(path)
     
+    Lr, _, _, ulog_T, ulog_t0, M, V, S = output
     with open(os.path.join(path, now.strftime("%H_%M_%S") + ".pickle"), 'wb') as f:
         pickle.dump(
-            {"ulog_T": ulog_T, "ulog_t0": ulog_t0, "M": M, "V": V, "S": S, "Lr": Lr},
-            f)
+            {"ulog_T": ulog_T, "ulog_t0": ulog_t0, "M": M, "V": V, "S": S, "Lr": Lr}, f)
