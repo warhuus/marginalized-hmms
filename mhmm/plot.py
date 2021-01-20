@@ -1,3 +1,7 @@
+import os
+import pickle
+from datetime import datetime
+
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -49,3 +53,36 @@ def diagnostics(Lr, log_T, log_t0, M, Cov, state_probabilites,
     plt.clf()
     plt.imshow(state_probabilites.T, aspect='auto', interpolation='none')
     drawnow()
+
+
+def get_latest(num, outputdir):
+
+    today = datetime.now().strftime("%m_%d")
+
+    files = os.listdir(os.path.join(outputdir, today))
+    files.sort()
+
+    outputs = [ os.path.join(outputdir, today, files[-i])
+                for i in range(1, num + 1)
+                if files[-i].endswith('.pickle') ]
+    return outputs
+
+def plot_latest(opt):
+
+    # get latest files
+    outfiles = get_latest(opt.num, opt.outputdir)
+
+    # setup plotting
+    fig, ax = plt.subplots()
+
+    # get log-likelihood from latest files
+    for outfile in outfiles:
+        with open(outfile, 'rb') as f:
+            outdict = pickle.load(f)
+        _ = ax.plot(np.arange(len(outdict['Lr'])) + 1, outdict['Lr'], label=outdict['algo'])
+        _ = ax.annotate('%0.2f' % outdict['Lr'][-1], xy=(len(outdict['Lr']), outdict['Lr'][-1]),
+                    textcoords='data')
+    ax.legend(loc="upper right")
+    ax.set_xlabel("iterations")
+    ax.set_ylabel("log-likelihood")
+    plt.show()
