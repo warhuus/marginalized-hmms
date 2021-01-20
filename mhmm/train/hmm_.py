@@ -4,7 +4,7 @@ import sys
 import torch
 from hmmlearn import hmm
 
-def run(X0, num_states, num_dimensions, lengths):
+def run(X0, num_states, num_dimensions, lengths, algorithm):
 
     # print convergence report to temporary file
     temperr = io.StringIO()
@@ -14,7 +14,7 @@ def run(X0, num_states, num_dimensions, lengths):
 
     model = hmm.GaussianHMM(n_components=num_states, covariance_type="full",
                             n_iter=len(lengths), random_state=0, tol=0.0001,
-                            verbose=True)
+                            verbose=True, algorithm=algorithm)
     _ = model.fit(X0.T, lengths)
 
     # get convergence report
