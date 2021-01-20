@@ -14,7 +14,7 @@ from . import data
 from . import train
 
 
-def main(model):
+def main(mdl):
 
     NUM_OBSERVATIONS = 500
     NUM_DIMENSIONS = 10
@@ -38,11 +38,15 @@ def main(model):
             NUM_OBSERVATIONS, NUM_STATES, NUM_DIMENSIONS, STATE_LENGTH, VARIANCE)
 
     # train
-    if model == "marginalized-hmm":
+    if mdl == "marginalized-hmm":
         output = train.marghmm.run( 
-            X0, NUM_STATES, NUM_DIMENSIONS, RANK_COVARIANCE, device, batch_size, lengths)
+            X0, NUM_STATES, NUM_DIMENSIONS, NUM_OBSERVATIONS, RANK_COVARIANCE,
+            device, batch_size, lengths)
+    elif mdl == "hmm":
+        output = train.hmm_.run(
+            X0, NUM_STATES, NUM_DIMENSIONS, lengths)
     else:
-        raise NotImplementedError("the indicated model is not yet implemented")
+        raise NotImplementedError("The indicated model is not implemented")
 
     # plot
     plot.diagnostics(*output, X0, NUM_OBSERVATIONS, NUM_STATES, device)
@@ -55,7 +59,8 @@ def main(model):
     if not os.path.isdir(path):
         os.mkdir(path)
     
-    Lr, _, _, ulog_T, ulog_t0, M, V, S = output
+    Lr, log_T, log_t0, M, Cov, state_probabilities = output
     with open(os.path.join(path, now.strftime("%H_%M_%S") + ".pickle"), 'wb') as f:
         pickle.dump(
-            {"ulog_T": ulog_T, "ulog_t0": ulog_t0, "M": M, "V": V, "S": S, "Lr": Lr}, f)
+            {"Lr": Lr, "log_T": log_T, "log_t0": log_t0,
+             "M": M, "Cov": Cov, "state_probabilities": state_probabilities}, f)

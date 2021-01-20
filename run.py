@@ -1,4 +1,4 @@
-from mhmm import hmm
+from mhmm import main
 
 if __name__ == '__main__':
-    hmm.main("marginalized-hmm")
+    main.main("hmm")
