@@ -20,6 +20,7 @@ def toy_data(X0):
     plt.clf()
     plt.imshow(X0.numpy())
     drawnow()
+    plt.show()
 
 
 def diagnostics(Lr, log_T, log_t0, M, Cov, state_probabilites,

@@ -13,7 +13,7 @@ def run(X0, num_states, num_dimensions, lengths, algorithm):
     assert all(lengths[i] == lengths[0] for i in range(1, len(lengths)))
 
     model = hmm.GaussianHMM(n_components=num_states, covariance_type="full",
-                            n_iter=len(lengths), random_state=0, tol=0.0001,
+                            n_iter=len(lengths), random_state=0, tol=1e-20,
                             verbose=True, algorithm=algorithm)
     _ = model.fit(X0.T, lengths)
 

@@ -20,9 +20,8 @@ def main(opt):
     NUM_DIMENSIONS = 10
     NUM_STATES = 5
     RANK_COVARIANCE = 0
-    STATE_LENGTH = 2
+    STATE_LENGTH = 10
     VARIANCE = 0.1
-    N_PLOT = 2              # plot every n_plot iterations
 
     assert (NUM_OBSERVATIONS // (NUM_STATES * STATE_LENGTH)) % 1 == 0
 
@@ -36,6 +35,9 @@ def main(opt):
     # make dummy data
     X0 = data.create(
             NUM_OBSERVATIONS, NUM_STATES, NUM_DIMENSIONS, STATE_LENGTH, VARIANCE)
+    
+    if opt.plotdata:
+        plot.toy_data(X0)
 
     # train
     if opt.algo == "direct":

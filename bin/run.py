@@ -13,6 +13,10 @@ if __name__ == '__main__':
                         help='''Whether to show the plots immediately
                                 or not (0 or 1).''', 
                         type=int)
+    parser.add_argument('--plotdata', default=0,
+                        help='''Whether to show a plot of the dummy data
+                                or not (0 or 1).''', 
+                        type=int)
     opt = parser.parse_args()
 
     main.main(opt)
