@@ -16,12 +16,12 @@ from . import train
 
 def main(opt):
 
-    NUM_OBSERVATIONS = 500
-    NUM_DIMENSIONS = 10
+    NUM_OBSERVATIONS = 10
+    NUM_DIMENSIONS = 3
     NUM_STATES = 5
     RANK_COVARIANCE = 0
-    STATE_LENGTH = 10
-    VARIANCE = 0.1
+    STATE_LENGTH = 1
+    VARIANCE = 0.01
 
     assert (NUM_OBSERVATIONS // (NUM_STATES * STATE_LENGTH)) % 1 == 0
 
@@ -32,10 +32,16 @@ def main(opt):
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    # make dummy data
-    X0 = data.create(
-            NUM_OBSERVATIONS, NUM_STATES, NUM_DIMENSIONS, STATE_LENGTH, VARIANCE)
-    
+    # make data
+    if opt.data == "fake"
+        X0 = data.fake(
+                NUM_OBSERVATIONS, NUM_STATES, NUM_DIMENSIONS, STATE_LENGTH, VARIANCE)
+    elif opt.data == "dummy"
+        X0 = data.dummy(
+                NUM_OBSERVATIONS, NUM_STATES, NUM_DIMENSIONS, lengths, VARIANCE)
+    else:
+        raise NotImplementedError("The indicated data is not implemented")
+
     if opt.plotdata:
         plot.toy_data(X0)
 
@@ -67,4 +73,4 @@ def main(opt):
         pickle.dump(
             {"Lr": Lr, "log_T": log_T, "log_t0": log_t0,
              "M": M, "Cov": Cov, "state_probabilities": state_probabilities,
-             "algo": opt.algo}, f)
+             "data": opt.data, "algo": opt.algo}, f)
