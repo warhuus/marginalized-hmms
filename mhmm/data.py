@@ -19,22 +19,30 @@ def fake(num_observations, num_states, num_dimensions, state_length, variance):
 
 def dummy(num_observations, num_states, num_dimensions, lengths, variance):
 
-    model = hmm.GaussianHMM(n_components=num_states)
+    model = hmm.GaussianHMM(n_components=num_states, covariance_type='full')
 
     model.startprob_ = np.array([0.8] + [0.2/(num_states - 1)
                                          for i in range(num_states - 1)])
-    model.transmat_ = np.tile(0.2/(num_states - 1), (num_states, num_states))
+    P = np.tile(0.2/(num_states - 1), (num_states, num_states))
+    np.fill_diagonal(P, 0.8)
+    model.transmat_ = P
 
     model.means_ = np.tile(np.arange(num_states)[:, None], num_dimensions)
     model.covars_ = np.tile(np.identity(num_dimensions)*variance,
                             (num_states, 1, 1))
 
     all_samples = np.empty((num_dimensions, num_observations))
+    all_states = np.empty(num_observations)
 
-    for i, l in enumerate(lengths):
+    positions = zip(np.hstack((np.array([0]), np.cumsum(lengths)[:-1])),
+                    np.cumsum(lengths))
 
-        sample, _ = model.sample(num_observations, random_state=0)
-        all_samples[:, i * l : i * (l + 1)] = sample.T
+    for start, end in positions:
 
-    return all_samples
+        sample, states = model.sample(end - start)
+        all_samples[:, start:end] = sample.T
+        all_states[start:end] = states
+
+    return (torch.tensor(all_samples, dtype=torch.float32),
+            torch.tensor(all_states, dtype=torch.int16))
                 

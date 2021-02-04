@@ -16,12 +16,12 @@ from . import train
 
 def main(opt):
 
-    NUM_OBSERVATIONS = 10
-    NUM_DIMENSIONS = 3
+    NUM_OBSERVATIONS = 100000
+    NUM_DIMENSIONS = 10
     NUM_STATES = 5
     RANK_COVARIANCE = 0
-    STATE_LENGTH = 1
-    VARIANCE = 0.01
+    STATE_LENGTH = 10
+    VARIANCE = 0.1
 
     assert (NUM_OBSERVATIONS // (NUM_STATES * STATE_LENGTH)) % 1 == 0
 
@@ -33,11 +33,11 @@ def main(opt):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # make data
-    if opt.data == "fake"
+    if opt.data == "fake":
         X0 = data.fake(
                 NUM_OBSERVATIONS, NUM_STATES, NUM_DIMENSIONS, STATE_LENGTH, VARIANCE)
-    elif opt.data == "dummy"
-        X0 = data.dummy(
+    elif opt.data == "dummy":
+        X0, X0_states = data.dummy(
                 NUM_OBSERVATIONS, NUM_STATES, NUM_DIMENSIONS, lengths, VARIANCE)
     else:
         raise NotImplementedError("The indicated data is not implemented")
