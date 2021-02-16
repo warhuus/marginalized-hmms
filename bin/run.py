@@ -1,4 +1,5 @@
 import argparse
+import json
 
 from mhmm import main
 
@@ -20,6 +21,16 @@ if __name__ == '__main__':
                         help='''Which data to use. Can be either "fake" or
                              "dummy".''', 
                         type=str)
-    opt = parser.parse_args()
+    parser.add_argument('--exp', default='fake-data',
+                        help='''Which experiment to use.
+                             ''', 
+                        type=str)
+    
+    opt = vars(parser.parse_args())
+
+    with open(f'experiments/{opt["exp"]}.json') as json_file:
+        experiment_args = json.load(json_file)
+
+    _ = opt.update(experiment_args)
 
     main.main(opt)

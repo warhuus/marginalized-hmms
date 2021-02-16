@@ -33,32 +33,32 @@ def main(opt):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # make data
-    if opt.data == "fake":
+    if opt["data"] == "fake":
         X0 = data.fake(
                 NUM_OBSERVATIONS, NUM_STATES, NUM_DIMENSIONS, STATE_LENGTH, VARIANCE)
-    elif opt.data == "dummy":
+    elif opt["data"] == "dummy":
         X0, X0_states = data.dummy(
                 NUM_OBSERVATIONS, NUM_STATES, NUM_DIMENSIONS, lengths, VARIANCE)
     else:
         raise NotImplementedError("The indicated data is not implemented")
 
-    if opt.plotdata:
+    if opt["plotdata"]:
         plot.toy_data(X0)
 
     # train
-    if opt.algo == "direct":
+    if opt["algo"] == "direct":
         output = train.marghmm.run( 
             X0, NUM_STATES, NUM_DIMENSIONS, NUM_OBSERVATIONS, RANK_COVARIANCE,
             device, batch_size, lengths)
-    elif opt.algo in ["viterbi", "map"]:
+    elif opt["algo"] in ["viterbi", "map"]:
         output = train.hmm_.run(
-            X0, NUM_STATES, NUM_DIMENSIONS, lengths, opt.algo)
+            X0, NUM_STATES, NUM_DIMENSIONS, lengths, opt["algo"])
     else:
         raise NotImplementedError("The indicated model is not implemented")
 
     # plot
     plot.diagnostics(*output, X0, NUM_OBSERVATIONS, NUM_STATES, device)
-    if opt.show:
+    if opt["show"]:
         plt.show()
    
     # save
@@ -73,4 +73,4 @@ def main(opt):
         pickle.dump(
             {"Lr": Lr, "log_T": log_T, "log_t0": log_t0,
              "M": M, "Cov": Cov, "state_probabilities": state_probabilities,
-             "data": opt.data, "algo": opt.algo}, f)
+             "data": opt["data"], "algo": opt["algo"]}, f)
