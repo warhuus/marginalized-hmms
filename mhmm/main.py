@@ -16,48 +16,32 @@ from . import train
 
 def main(opt):
 
-    NUM_OBSERVATIONS = 100000
-    NUM_DIMENSIONS = 10
-    NUM_STATES = 5
-    RANK_COVARIANCE = 0
-    STATE_LENGTH = 10
-    VARIANCE = 0.1
+    N = opt['N']
+    D = opt['D']
+    K = opt['K']
+    cov_rank = opt['K']
+    state_length = opt['state_length']
+    var = opt['var']
 
-    assert (NUM_OBSERVATIONS // (NUM_STATES * STATE_LENGTH)) % 1 == 0
-
-    batch_size = NUM_STATES * STATE_LENGTH
-    lengths = [batch_size] * (NUM_OBSERVATIONS // batch_size)
-
-    assert isinstance(lengths, list)
+    lengths = np.repeat(N, N_seq).tolist()
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    # make data
-    if opt["data"] == "fake":
-        X0 = data.fake(
-                NUM_OBSERVATIONS, NUM_STATES, NUM_DIMENSIONS, STATE_LENGTH, VARIANCE)
-    elif opt["data"] == "dummy":
-        X0, X0_states = data.dummy(
-                NUM_OBSERVATIONS, NUM_STATES, NUM_DIMENSIONS, lengths, VARIANCE)
-    else:
-        raise NotImplementedError("The indicated data is not implemented")
-
-    if opt["plotdata"]:
-        plot.toy_data(X0)
+    X0 = data.create(opt, return_type='tensor')
 
     # train
     if opt["algo"] == "direct":
         output = train.marghmm.run( 
-            X0, NUM_STATES, NUM_DIMENSIONS, NUM_OBSERVATIONS, RANK_COVARIANCE,
+            X0.T, K, D, N, cov_rank,
             device, batch_size, lengths)
     elif opt["algo"] in ["viterbi", "map"]:
         output = train.hmm_.run(
-            X0, NUM_STATES, NUM_DIMENSIONS, lengths, opt["algo"])
+            X0, K, D, lengths, opt["algo"])
     else:
         raise NotImplementedError("The indicated model is not implemented")
 
     # plot
-    plot.diagnostics(*output, X0, NUM_OBSERVATIONS, NUM_STATES, device)
+    plot.diagnostics(*output, X0.T, N, K, device)
     if opt["show"]:
         plt.show()
    

@@ -1,3 +1,9 @@
 {
-    "data": "fake"
+    "data": "fake",
+    "N": 250,
+    "D": 10,
+    "K": 5,
+    "cov_rank": 0,
+    "state_length": 10,
+    "var": 0.1
 }

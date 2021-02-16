@@ -18,7 +18,7 @@ def drawnow():
 def toy_data(X0):
     plt.figure('Data')
     plt.clf()
-    plt.imshow(X0.numpy())
+    plt.imshow(X0)
     drawnow()
     plt.show()
 
