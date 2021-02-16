@@ -2,7 +2,7 @@
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
-from sklearn import cluster
+from hmmlearn import hmm
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 #%% Helper functions
@@ -78,6 +78,7 @@ n_plot = 50 # Plot every n_plot iterations
 
 # Minibatch log-likelihood
 Lr = np.repeat(np.nan, R)
+Lr_hmm = np.repeat(np.nan, R)
 
 # Optimizer
 optimizer = torch.optim.Adam([ulog_T, ulog_t0, M, V, S], lr=0.05)
@@ -91,6 +92,21 @@ for r in range(R):
     
     log_T = ulog_T - lsum(ulog_T, dim=0)
     log_t0 = ulog_t0 - lsum(ulog_t0)
+
+    # Make hmmlearn model
+    model = hmm.GaussianHMM(num_states,'full',init_params='')
+    model.startprob_ =  log_t0.exp().detach().numpy().astype(np.float64)
+    model.transmat_ = log_T.exp().detach().numpy().astype(np.float64).T
+    model.means_ = M.detach().numpy().astype(np.float64).T
+    S_numpy = S.detach().numpy().astype(np.float64)
+    V_numpy = V.detach().numpy().astype(np.float64)
+    model.covars_ = np.array([np.linalg.inv(np.matmul(S_numpy[:, :, i].T,
+                                                      S_numpy[:, :, i])
+                                            + np.diag(V_numpy[:, i]**2)
+                                            ).astype(np.float64)
+                              for i in range(num_states)])
+    Lr_hmm[r] = model.score(X.detach().numpy().astype(np.float64).T)
+
     E = logL(X, M, V, S)
     
     log_p = log_t0+E[0]    
@@ -154,3 +170,4 @@ for r in range(R):
         p = np.exp(log_p_t - lsum_numpy(log_p_t, dim=1))
         plt.imshow(p.T, aspect='auto', interpolation='none')
         drawnow()
+#%%
