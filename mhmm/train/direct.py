@@ -45,20 +45,9 @@ def calc_logprob_save(x, K, log_T, log_t0, M, V, S):
     using hmmlearn.
     """
 
-    # make hmmlearn model and set prob matrices
+    # make hmmlearn model and fill
     model = hmm.GaussianHMM(K, 'full', init_params='')
-    model.startprob_ =  log_t0.exp().detach().numpy().astype(np.float64)
-    model.transmat_ = log_T.exp().detach().numpy().astype(np.float64).T
-
-    # set means and covars
-    model.means_ = M.detach().numpy().astype(np.float64).T
-    S_numpy = S.detach().numpy().astype(np.float64)
-    V_numpy = V.detach().numpy().astype(np.float64)
-    model.covars_ = np.array([np.linalg.inv(np.matmul(S_numpy[:, :, i].T,
-                                                      S_numpy[:, :, i])
-                                            + np.diag(V_numpy[:, i]**2)
-                                            ).astype(np.float64)
-                              for i in range(K)])
+    model = utils.fill_hmmlearn_params(model, K, log_T, log_t0, M, V, S)
 
     return - model.score(x.detach().numpy().astype(np.float64).T)
 

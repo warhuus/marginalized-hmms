@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from hmmlearn import hmm
 
 from .. import ops
 
@@ -12,6 +13,33 @@ def init_params(K, D, par):
     S = torch.randn((0, D, K), **par)
     return ulog_T, ulog_t0, M, V, S
 
+def fill_hmmlearn_params(model: hmm.GaussianHMM, K: int, log_T: torch.tensor,
+                         log_t0: torch.tensor, M: torch.tensor,
+                         V: torch.tensor, S: torch.tensor) -> hmm.GaussianHMM:
+    """
+    Populate an hmmlearn model with parameters defined as in
+    Mikkel's original code
+    """
+    # normalize if not yet normalized
+    if not torch.allclose(log_T.exp().sum(1), torch.tensor([1.] * K), atol=0.01):
+        log_T = log_T - ops.logsum(log_T)
+    if not torch.allclose(log_t0.exp().sum(), torch.tensor([1.]), atol=0.01):
+        log_t0 = log_t0 - ops.logsum(log_t0)
+
+    T, t0, M, V, S = [param.detach().numpy().astype(np.float64)
+                      for param in [log_T.exp().T, log_t0.exp(), M.T, V, S]]
+
+    # set probabilities
+    model.startprob_ = t0
+    model.transmat_ = T
+
+    # set means and covars
+    model.means_ = M
+    model.covars_ = np.array([np.linalg.inv(np.matmul(S[:, :, i].T,
+                                                      S[:, :, i])
+                                            + np.diag(V[:, i]**2))
+                              for i in range(K)])
+    return model
 
 def make_iter(lengths):
 
