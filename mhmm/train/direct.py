@@ -53,7 +53,8 @@ def calc_logprob_save(x, K, log_T, log_t0, M, V, S):
 
 
 def run(X: torch.tensor, lengths: list, N: int, D: int, K: int,
-        bs: Optional[int] = None, N_iter: int = 1000, **kwargs):
+        bs: Optional[int] = None, N_iter: int = 1000, reps: int = 20,
+        **kwargs):
     """ Train an HMM model using direct optimization """
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -62,37 +63,57 @@ def run(X: torch.tensor, lengths: list, N: int, D: int, K: int,
     bs = 1 if bs is None else bs
     assert bs <= N
 
-    # init params and optimizer, send X to device
+    # init params pars
     par = {'requires_grad': True, 'dtype': torch.float32, 'device': device}
-    ulog_T, ulog_t0, M, V, S = utils.init_params(K, D, par, X=X)
-    optimizer = torch.optim.Adam([ulog_T, ulog_t0, M, V, S], lr=0.05)
     
     # transpose X for this part
     X = X.T.to(device)
 
-    # Prepare log-likelihood save and loop generator
-    L = np.empty(N_iter)
+    # get log-like. measurements ready
+    min_neg_loglik = 1e10
+    Ls = np.empty((reps, N_iter))
 
-    for i in range(N_iter):
+    for r in range(reps):
 
-        for start, end in utils.make_iter(lengths):
+        # init params and optimizer
+        ulog_T, ulog_t0, M, V, S = utils.init_params(K, D, par, X=X.T, perturb=True)
+        optimizer = torch.optim.Adam([ulog_T, ulog_t0, M, V, S], lr=0.075)
+        
+        # Prepare log-likelihood save and loop generator
+        L = np.zeros(N_iter)
 
-            # get sequence
-            x = X[:, start:end]
+        for i in range(N_iter):
 
-            # normalize log transition matrix
-            log_T = ulog_T - ops.logsum(ulog_T)
-            log_t0 = ulog_t0 - ops.logsum(ulog_t0)
+            for start, end in utils.make_iter(lengths):
 
-            # calc and save log-likelihood using hmmlearn
-            L[i] += calc_logprob_save(x, K, log_T, log_t0, M, V, S)
+                # get sequence
+                x = X[:, start:end]
 
-            # calc log-likelihood using Mikkel's functions and take a step
-            Li_optim = calc_logprob_optim(x, log_T, log_t0, M, V, S, device)
-            
-            optimizer.zero_grad()
-            Li_optim.backward()
-            optimizer.step()
+                # normalize log transition matrix
+                log_T = ulog_T - ops.logsum(ulog_T)
+                log_t0 = ulog_t0 - ops.logsum(ulog_t0)
+
+                # calc and save log-likelihood using hmmlearn
+                L[i] += calc_logprob_save(x, K, log_T, log_t0, M, V, S)
+
+                # calc log-likelihood using Mikkel's functions and take a step
+                Li_optim = calc_logprob_optim(x, log_T, log_t0, M, V, S, device)
+                
+                optimizer.zero_grad()
+                Li_optim.backward()
+                optimizer.step()
+        
+        # update the minimum negative log-likelihood
+        min_neg_loglik = min(L.tolist() + [min_neg_loglik])
+
+        # save the best model thus far
+        if min_neg_loglik in L:
+           best_params = ulog_T, ulog_t0, log_T, log_t0, M, V, S
+        
+        Ls[r, :] = L
+
+    # take observations from the best model
+    ulog_T, ulog_t0, log_T, log_t0, M, V, S = best_params
 
     # get covariance matrix
     S_numpy = S.detach().cpu().numpy()
@@ -126,4 +147,4 @@ def run(X: torch.tensor, lengths: list, N: int, D: int, K: int,
     log_p_t = log_p_n + log_p_b
     state_probabilites = np.exp(log_p_t - ops.logsum_numpy(log_p_t, dim=1))
 
-    return L, log_T, log_t0, M.detach().cpu().numpy(), Cov, state_probabilites
+    return Ls, log_T, log_t0, M.detach().cpu().numpy(), Cov, state_probabilites

@@ -77,13 +77,20 @@ def plot_latest(opt):
     fig, ax = plt.subplots()
 
     # get log-likelihood from latest files
-    for outfile in outfiles:
+    colors = ['r', 'b']
+    for i, outfile in enumerate(outfiles):
         with open(outfile, 'rb') as f:
             outdict = pickle.load(f)
-        _ = ax.plot(np.arange(len(outdict['Lr'])) + 1, outdict['Lr'], label=outdict['algo'])
-        _ = ax.annotate('%0.2f' % outdict['Lr'][-1], xy=(len(outdict['Lr']), outdict['Lr'][-1]),
-                    textcoords='data')
+        _ = ax.plot(np.arange(outdict['Lr'].shape[1]) + 1, outdict['Lr'].mean(0),
+                    label=f"{outdict['algo']}: minimum = {round(np.nanmin(outdict['Lr']), 1)}", color=colors[i])
+        
+        for r in range(outdict['Lr'].shape[0]):
+            _ = ax.plot(np.arange(outdict['Lr'].shape[1]) + 1, outdict['Lr'][r, :],
+                        color=colors[i], alpha=0.3)
+        
     ax.legend(loc="upper right")
     ax.set_xlabel("iterations")
     ax.set_ylabel("log-likelihood")
+    ax.set_title("average log-likelihood over reps")
+    ax.set_ylim([0, 10000])
     plt.show()

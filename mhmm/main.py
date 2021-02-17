@@ -35,10 +35,10 @@ def main(opt):
 
     output = method(X, data.make_lengths(opt), **opt)
 
-    # plot
-    plot.diagnostics(*output, X.T, N, K)
-    if opt['show']:
-        plt.show()
+    # plot - broken for now
+    # plot.diagnostics(*output, X.T, N, K)
+    # if opt['show']:
+    #     plt.show()
    
     # save
     now = datetime.datetime.now()
