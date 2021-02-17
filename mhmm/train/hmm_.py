@@ -18,7 +18,7 @@ def run(X: torch.tensor, lengths: list, K: int, D: int,
     # setup model
     model = hmm.GaussianHMM(K, "full", n_iter=N_iter, tol=1e-20,
                             verbose=True, algorithm=algo, init_params='')
-    model = utils.fill_hmmlearn_params(model, K, *utils.init_params(K, D))
+    model = utils.fill_hmmlearn_params(model, K, *utils.init_params(K, D, X=X))
     _ = model.fit(X, lengths)
 
     # get convergence report

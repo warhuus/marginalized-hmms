@@ -11,7 +11,7 @@ os.chdir((r'c:\\Users\\CHSWA\\OneDrive - Ørsted\\DTU\\semester_2\\' +
           r'hmm_specialkursus\\mhmm'))
 
 def get_data():
-    filenames = get_latest(2, 'output', date="02_07")
+    filenames = get_latest(2, 'output')
 
     items = {}
     for filename in filenames:

@@ -64,7 +64,7 @@ def run(X: torch.tensor, lengths: list, N: int, D: int, K: int,
 
     # init params and optimizer, send X to device
     par = {'requires_grad': True, 'dtype': torch.float32, 'device': device}
-    ulog_T, ulog_t0, M, V, S = utils.init_params(K, D, par)
+    ulog_T, ulog_t0, M, V, S = utils.init_params(K, D, par, X=X)
     optimizer = torch.optim.Adam([ulog_T, ulog_t0, M, V, S], lr=0.05)
     
     # transpose X for this part
