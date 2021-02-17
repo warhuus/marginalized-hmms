@@ -23,30 +23,21 @@ def main(opt):
     state_length = opt['state_length']
     var = opt['var']
 
-    # get device
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
     # create data
-    X0 = data.create(opt, return_type='tensor')
+    X = data.create(opt, return_type='tensor')
 
     # train
     try:
-        N_seq = opt['N_seq']
+        method = {'direct': train.direct.run, 'map': train.hmm_.run,
+                  'viterbi': train.hmm_.run}[opt['algo']]
     except KeyError:
-        N_seq = 1
-    lengths = np.repeat(N, N_seq).tolist()
+        raise NotImplementedError
 
-    if opt["algo"] == "direct":
-        output = train.direct.run(X0, device, lengths, **opt)
-    elif opt["algo"] in ["viterbi", "map"]:
-        output = train.hmm_.run(
-            X0, K, D, lengths, opt["algo"])
-    else:
-        raise NotImplementedError("The indicated model is not implemented")
+    output = method(X, data.make_lengths(opt), **opt)
 
     # plot
-    plot.diagnostics(*output, X0.T, N, K, device)
-    if opt["show"]:
+    plot.diagnostics(*output, X.T, N, K)
+    if opt['show']:
         plt.show()
    
     # save

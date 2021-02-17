@@ -52,9 +52,12 @@ def calc_logprob_save(x, K, log_T, log_t0, M, V, S):
     return - model.score(x.detach().numpy().astype(np.float64).T)
 
 
-def run(X: torch.tensor, device: torch.device, lengths: list, N: int, D: int, K: int,
+def run(X: torch.tensor, lengths: list, N: int, D: int, K: int,
         bs: Optional[int] = None, N_iter: int = 1000, **kwargs):
     """ Train an HMM model using direct optimization """
+
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
     # init batch size
     bs = 1 if bs is None else bs
     assert bs <= N

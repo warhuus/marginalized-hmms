@@ -24,7 +24,7 @@ def toy_data(X0):
 
 
 def diagnostics(Lr, log_T, log_t0, M, Cov, state_probabilites,
-                X0, num_observations, num_states, device):
+                X0, num_observations, num_states):
     # log likelihood
     plt.figure('Objective').clf()
     plt.plot(Lr)

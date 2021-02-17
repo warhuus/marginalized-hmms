@@ -5,7 +5,7 @@ from hmmlearn import hmm
 from .. import ops
 
 
-def init_params(K, D, par):
+def init_params(K: int, D: int, par: dict = {}):
     ulog_T = torch.randn((K, K), **par)
     ulog_t0 = torch.randn(K, **par)
     M = torch.randn((D, K), **par)

@@ -7,9 +7,18 @@ from hmmlearn import hmm
 from . import plot
 
 
+def make_lengths(opt: dict) -> list:
+    """ Make list of lengths of sequences """
+    try:
+        N_seq = opt['N_seq']
+    except KeyError:
+        N_seq = 1
+
+    return [opt['N']] * N_seq
+
 def create(opt: dict, return_type: Union['tensor', 'numpy'],
            ) -> Union[torch.tensor, np.ndarray]:
-    """ Create data for the particular experiment """
+    """ Create data for a particular experiment """
     X = {'fake': fake(**opt),
          'dummy': dummy(**opt)}[opt['data']]
 
