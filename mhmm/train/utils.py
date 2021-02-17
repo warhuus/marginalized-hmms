@@ -9,23 +9,23 @@ from .. import ops
 
 
 def init_params(K: int, D: int, par: dict = {}, cluster_init: bool = True,
-                X: Optional[torch.tensor] = None):
+                X: Optional[torch.tensor] = None, perturb: bool = False):
     """ Initialize parameters similar to as done in hmmlearn """
-    init = 1. / K
-    ulog_T = torch.full((K, K), init, **par)
-    ulog_t0 = torch.full((K,), init, **par)
+    ulog_T = torch.randn((K, K), **par)
+    ulog_t0 = torch.randn((K,), **par)
 
     # make cluster means
     if cluster_init:
         kmeans = cluster.KMeans(n_clusters=K)
         kmeans.fit(X)
-        M = torch.tensor(kmeans.cluster_centers_.T, **par)
+        M = torch.tensor(kmeans.cluster_centers_.T
+                         + np.random.normal(size=(D, K)), **par)
     else:
         M = torch.randn((D, K), **par)
 
     # make covariance matrix
-    V = torch.full((D, K), 10, **par)
-    S = torch.full((D, D, K), 10, **par)
+    V = torch.full((D, K), 10 + np.random.normal(), **par)
+    S = torch.full((D, D, K), 10 + np.random.normal(), **par)
 
     return ulog_T, ulog_t0, M, V, S
 
