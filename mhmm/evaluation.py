@@ -5,13 +5,13 @@ import pickle
 import torch
 import numpy as np
 
-from mhmm.plot import get_latest
+from mhmm import plot
 
 os.chdir((r'c:\\Users\\CHSWA\\OneDrive - Ørsted\\DTU\\semester_2\\' +
           r'hmm_specialkursus\\mhmm'))
 
 def get_data():
-    filenames = get_latest(2, 'output')
+    filenames = plot.get_latest(2, 'output')
 
     items = {}
     for filename in filenames:
@@ -67,14 +67,14 @@ with torch.no_grad():
 with torch.no_grad():
 
 
-    for i in range(5):
+    for i in range(viterbi['Cov'].shape[0]):
         
-        plt.subplot(2, 5, 1 + i)
+        plt.subplot(2, viterbi['Cov'].shape[0], 1 + i)
         plt.imshow(np.exp(viterbi['Cov'][i, :, :]))
         plt.colorbar()
         _ = plt.title('viterbi Cov')
         
-        plt.subplot(2, 5, 1 + i + 5)
+        plt.subplot(2, viterbi['Cov'].shape[0], 1 + i + viterbi['Cov'].shape[0])
         plt.imshow(np.exp(direct['Cov'][i, :, :]))
         plt.colorbar()
         _ = plt.title('direct Cov')

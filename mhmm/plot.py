@@ -61,11 +61,11 @@ def get_latest(num, outputdir):
     today = datetime.now().strftime("%m_%d")
 
     files = os.listdir(os.path.join(outputdir, today))
+    files = [name for name in files if name.endswith('.pickle')]
     files.sort()
 
     outputs = [ os.path.join(outputdir, today, files[-i])
-                for i in range(1, num + 1)
-                if files[-i].endswith('.pickle') ]
+                for i in range(1, num + 1) ]
     return outputs
 
 def plot_latest(opt):
