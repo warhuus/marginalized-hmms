@@ -23,17 +23,21 @@ def main(opt):
     state_length = opt['state_length']
     var = opt['var']
 
-    lengths = np.repeat(N, N_seq).tolist()
-
+    # get device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+    # create data
     X0 = data.create(opt, return_type='tensor')
 
     # train
+    try:
+        N_seq = opt['N_seq']
+    except KeyError:
+        N_seq = 1
+    lengths = np.repeat(N, N_seq).tolist()
+
     if opt["algo"] == "direct":
-        output = train.marghmm.run( 
-            X0.T, K, D, N, cov_rank,
-            device, batch_size, lengths)
+        output = train.direct.run(X0, device, lengths, **opt)
     elif opt["algo"] in ["viterbi", "map"]:
         output = train.hmm_.run(
             X0, K, D, lengths, opt["algo"])

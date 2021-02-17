@@ -4,12 +4,12 @@ import numpy as np
 from .. import ops
 
 
-def init_params(num_states, num_dimensions, rank_covariance, par):
-    ulog_T = torch.randn((num_states, num_states), **par)
-    ulog_t0 = torch.randn(num_states, **par)
-    M = torch.randn((num_dimensions, num_states), **par)
-    V = torch.ones((num_dimensions, num_states), **par)
-    S = torch.randn((rank_covariance, num_dimensions, num_states), **par)
+def init_params(K, D, par):
+    ulog_T = torch.randn((K, K), **par)
+    ulog_t0 = torch.randn(K, **par)
+    M = torch.randn((D, K), **par)
+    V = torch.ones((D, K), **par)
+    S = torch.randn((0, D, K), **par)
     return ulog_T, ulog_t0, M, V, S
 
 
