@@ -92,5 +92,4 @@ def plot_latest(opt):
     ax.set_xlabel("iterations")
     ax.set_ylabel("log-likelihood")
     ax.set_title("average log-likelihood over reps")
-    ax.set_ylim([0, 10000])
     plt.show()

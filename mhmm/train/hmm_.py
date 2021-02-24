@@ -5,6 +5,7 @@ from typing import Union
 import torch
 from hmmlearn import hmm
 import numpy as np
+from tqdm import tqdm
 
 from . import utils
 
@@ -16,7 +17,7 @@ def run(X: torch.tensor, lengths: list, K: int, D: int,
     min_neg_loglik = 1e10
     Ls = np.tile(np.nan, (reps, N_iter))
     
-    for r in range(reps):
+    for r in tqdm(range(reps)):
 
        # print convergence report to temporary file
        temperr = io.StringIO()
@@ -24,9 +25,9 @@ def run(X: torch.tensor, lengths: list, K: int, D: int,
 
        # setup model
        model = hmm.GaussianHMM(K, "full", n_iter=N_iter, tol=1e-20,
-                                   verbose=True, algorithm=algo, init_params='')
-       model = utils.fill_hmmlearn_params(model, K, *utils.init_params(K, D, X=X,
-                                                                       perturb=True))
+                               verbose=True, algorithm=algo, init_params='')
+       model = utils.fill_hmmlearn_params(model, *utils.init_params(K, D, X=X,
+                                                                    perturb=True))
        _ = model.fit(X, lengths)
 
        # get convergence report

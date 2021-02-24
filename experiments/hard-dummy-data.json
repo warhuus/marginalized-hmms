@@ -1,12 +1,12 @@
 {
     "data": "hard_dummy",
-    "which_hard": 0,
-    "N": 1000,
+    "which_hard": 2,
+    "N": 500,
     "D": 2,
     "K": 3,
     "cov_rank": 0,
     "state_length": 10,
     "var": 0.1,
     "N_iter": 400,
-    "reps": 10
+    "reps": 3
 }
