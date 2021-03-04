@@ -21,8 +21,12 @@ def make_lengths(opt: dict) -> list:
 def create(opt: dict, return_type: Union['tensor', 'numpy'],
            ) -> Union[torch.tensor, np.ndarray]:
     """ Create data for a particular experiment """
-    X = {'fake': fake, 'dummy': dummy, 'hard_dummy': hard_dummy
-         }[opt['data']](**opt)
+
+    try:
+        X = {'fake': fake, 'dummy': dummy, 'hard_dummy': hard_dummy
+            }[opt['data']](**opt)
+    except KeyError:
+        raise NotImplementedError
 
     if opt['plotdata']:
         plot.toy_data(X[:opt['N'], :].T)

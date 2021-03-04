@@ -24,7 +24,11 @@ def main(opt):
     var = opt['var']
 
     # create data
-    X = data.create(opt, return_type='tensor')
+    if opt.get('data') == 'hcp':
+        raise NotImplementedError
+        X = data.hcp.get(opt)
+    else:
+        X = data.toy.create(opt, return_type='tensor')
 
     # train
     try:
