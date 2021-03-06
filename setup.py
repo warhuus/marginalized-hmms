@@ -7,8 +7,8 @@ setup(
       author_email='christopher.warhuus@gmail.com',
       packages=setuptools.find_packages(),
       install_requires=['torch',
-                        'torchvision',
                         'numpy',
                         'matplotlib',
-                        'hmmlearn']
+                        'hmmlearn',
+                        'tqdm']
       )
