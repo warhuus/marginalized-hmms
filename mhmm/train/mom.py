@@ -1,23 +1,26 @@
-#%%
+from typing import List
 
-from typing import Union, List
-
-import torch
 import numpy as np
-from numpy import ndarray
 import scipy.linalg
 
 
-def form_L(B312: List[np.ndarray], k: int) -> ndarray:
+def form_L(B312: List[np.ndarray], k: int, verbose: bool) -> np.ndarray:
     ''' Return L, R3 '''
     L = np.empty((k, k))
 
     # step 1: compute R3 that diagonalizes B312[0]
     L[0], R3 = scipy.linalg.eig(B312[0])
+    R3 = R3.real
     
     # step 2: obtain the diagonals of the matrices R3^-1 @ B312[j] @ R3
     # for all but the first entry.
-    R3_inv = np.linalg.inv(R3)
+    try:
+        R3_inv = np.linalg.inv(R3)
+    except np.linalg.LinAlgError:
+        return None, None
+        if verbose:
+            print(f'failed to invert R3:\n\nR3 = {R3}\n')
+
     for i in range(1, k):
         L[i] = np.diag(R3_inv.dot(B312[i]).dot(R3))
     
@@ -35,36 +38,47 @@ def sample_rotation_matrix(k: int) -> np.ndarray:
     return theta
 
 
-def make_P32(X, discrete: bool = False):
+def make_P32(X: np.ndarray) -> np.ndarray:
     ''' Compute P32 '''
-    P32 = [np.einsum('i, j -> ij', X[i + 1], X[i])
-           for i in range(1, len(X) - 1)]
+    P32 = [np.einsum('i, j -> ij', X[i + 2], X[i + 1])
+           for i in range(len(X) - 2)]
         
     return sum(P32) / len(P32)
 
 
-def make_P31(X, discrete: bool = False):
+def make_P31(X: np.ndarray) -> np.ndarray:
     ''' Compute P31 '''
     P31 = [np.einsum('i, j -> ij', X[i + 2], X[i])
-           for i in range(0, len(X) - 2)]
+           for i in range(len(X) - 2)]
     return sum(P31) / len(P31)
 
 
-def make_P312(X, discrete: bool = False):
+def make_P312(X: np.ndarray) -> np.ndarray:
     ''' Compute P_312 '''
     P312 = [np.einsum('i, j, k -> ijk', X[i + 2], X[i], X[i + 1])
             for i in range(0, len(X) - 2)]
     return sum(P312) / len(P312)
 
 
-def run(X, k: int) -> ndarray:
+def run(X: np.ndarray, k: int, verbose: bool = False) -> np.ndarray:
     '''
-    Anandkumar, et al. 2012 algorithm B. Code inspired by maxentile:
-    https://github.com/maxentile/method-of-moments-tinker/blob/master/HMM%20method%20of%20moments.ipynb
+    Implementation of Algorithm B from Anandkumar, et al. 2012 for HMMs with
+    multivariate Gaussian emissions. Code taken partly from maxentile (https://bit.ly/3ualJru)
+    with inspiration from cmgithub's Matlab code for discrete emissions (https://bit.ly/3uakvfW).
+    
+    Returns None, None upon insolvent results. To see errors, use verbose = True.
 
-    Inputs:
-        X: N x D... I think we need to subtract the mean.
+    Input:
+        X: Time series data, ndarray of shape (sample size, dimesions).
+        k: A prior number of states, integer.
+        verbose: boolean (default False), whether or not to print errors.
         
+    Output:
+        O: Estimated emission means, ndarray of shape (k, dimensions).
+        T: Transition probability matrix, ndarray of shape (k, k). The
+            probability of transitioning from the i'th to the j'th state
+            is given by cell (j, i).
+
     '''
 
     # make P matrices
@@ -92,14 +106,30 @@ def run(X, k: int) -> ndarray:
     ]
 
     # form matrix L
-    L, R3 = form_L(B312, k)
+    L, R3 = form_L(B312, k, verbose)
 
-    # form and return M2
-    M2 = U2.dot(np.linalg.inv(theta).dot(L))
-    emission_probs = np.real(M2)
+    if L is None:
+        return None, None
 
-    # get transition matrix
-    transmat = np.real(np.linalg.inv(U3.T.dot(emission_probs)).dot(R3))
-    transmat = transmat / transmat.sum(axis=0).T
+    else:
 
-    return emission_probs, transmat
+        # form and return M2
+        O = U2.dot(np.linalg.inv(theta).dot(L))
+
+        # get transition matrix
+        try:
+            T = np.linalg.inv(U3.T.dot(O)).dot(R3)
+        except np.linalg.LinAlgError:
+            T = None
+            if verbose:
+                print(f'failed to invert U3^T O:\n\nU3^T O = {U3.T.dot(O)}\n')
+
+        # set to None if any probabilities are negative
+        if (T < 0).any():
+            T = None
+            if verbose:
+                print(f'negative probability in T:\n\nT = {T}\n')
+        else:
+            T = T / T.sum(axis=0).T
+
+        return O, T
