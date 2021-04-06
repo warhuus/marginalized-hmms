@@ -99,7 +99,7 @@ def run(X, k: int) -> ndarray:
     emission_probs = np.real(M2)
 
     # get transition matrix
-    transmat = np.real(np.linalg.inv(U3.T.dot(emission_probs)).dot(R3))
+    transmat = np.linalg.inv(U3.T.dot(emission_probs)).dot(R3)
     transmat = transmat / transmat.sum(axis=0).T
 
     return emission_probs, transmat
