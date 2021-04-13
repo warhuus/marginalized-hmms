@@ -7,7 +7,6 @@ import nibabel as nib
 from nilearn import image
 import matplotlib.pyplot as plt
 import numpy as np
-from dynplot import dynplot
 
 #%% find data
 repo = git.Repo('.', search_parent_directories=True)
@@ -44,13 +43,13 @@ mat_data_path = path.join(
 #%% get data
 
 # this is the ICA group that each voxel belongs to
-dlabel = image.get_data(path.join(repo.working_tree_dir, data_path, 'melodic_IC_ftb.dlabel.nii'))
+dlabel = image.get_data(path.join(repo.working_tree_dir, ica_data_path, 'melodic_IC_ftb.dlabel.nii'))
 
 # this I probably don't really need, it's just the ICA values for each voxel
-dscalar = image.get_data(path.join(repo.working_tree_dir, data_path, 'melodic_IC.dscalar.nii'))
+dscalar = image.get_data(path.join(repo.working_tree_dir, ica_data_path, 'melodic_IC.dscalar.nii'))
 
 # this I also don't think I need
-dsum = image.get_data(path.join(repo.working_tree_dir, data_path, 'melodic_IC_sum.nii.gz'))
+dsum = image.get_data(path.join(repo.working_tree_dir, ica_data_path, 'melodic_IC_sum.nii.gz'))
 
 #%% inspect data
 for data in [dlabel, dscalar, dsum]:
