@@ -60,7 +60,7 @@ def make_P312(X: np.ndarray) -> np.ndarray:
     return sum(P312) / len(P312)
 
 
-def run(X: np.ndarray, k: int, verbose: bool = False) -> np.ndarray:
+def perform_iteration(X: np.ndarray, k: int, verbose: bool = False) -> np.ndarray:
     '''
     Implementation of Algorithm B from Anandkumar, et al. 2012 for HMMs with
     multivariate Gaussian emissions. Code taken partly from maxentile (https://bit.ly/3ualJru)
@@ -133,3 +133,7 @@ def run(X: np.ndarray, k: int, verbose: bool = False) -> np.ndarray:
             T = T / T.sum(axis=0).T
 
         return O, T
+
+
+def run(X: np.ndarray, k: int, verbose: bool = False, N_iter: int = 1000,
+        reps: int = 20, )
