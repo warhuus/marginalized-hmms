@@ -2,6 +2,7 @@ from typing import List
 
 import numpy as np
 import scipy.linalg
+from tqdm import tqdm
 
 
 def form_L(B312: List[np.ndarray], k: int, verbose: bool) -> np.ndarray:
@@ -59,8 +60,15 @@ def make_P312(X: np.ndarray) -> np.ndarray:
             for i in range(0, len(X) - 2)]
     return sum(P312) / len(P312)
 
+def make_P3122(X: np.ndarray) -> np.ndarray:
+    ''' Compute P_312 '''
+    P312 = [np.einsum('i, j, k, m -> ijkm', X[i + 2], X[i], X[i + 1], X[i + 1])
+            for i in range(0, len(X) - 2)]
+    return sum(P312) / len(P312)
 
-def perform_iteration(X: np.ndarray, k: int, verbose: bool = False) -> np.ndarray:
+
+def perform_iteration(X: np.ndarray, k: int, verbose: bool = False,
+                      out: str = 'means') -> np.ndarray:
     '''
     Implementation of Algorithm B from Anandkumar, et al. 2012 for HMMs with
     multivariate Gaussian emissions. Code taken partly from maxentile (https://bit.ly/3ualJru)
@@ -81,10 +89,15 @@ def perform_iteration(X: np.ndarray, k: int, verbose: bool = False) -> np.ndarra
 
     '''
 
+    assert out in ['means', 'covs']
+
     # make P matrices
     P31 = make_P31(X)
     P32 = make_P32(X)
-    P312 = make_P312(X)
+    if out == 'means':
+        P312 = make_P312(X)
+    elif out = 'covs':
+        P312 = make_P3122(X)   # proposition 4.1
 
     # compute top-k singular vectors
     U3, _, U1 = np.linalg.svd(P31)
@@ -132,8 +145,41 @@ def perform_iteration(X: np.ndarray, k: int, verbose: bool = False) -> np.ndarra
         else:
             T = T / T.sum(axis=0).T
 
-        return O, T
+    return O, T
+
+#%%
+def run(X: np.ndarray, K: int, D: int, verbose: bool = False, N_iter: int = 1000,
+        reps: int = 20, **kwargs):
+    ''' Run multiple iterations and reps of the mom algorithm '''
+
+    assert D == X.shape[0]
+    assert K <= D
+    
+    Ls = np.empty(r)
+    for r in tqdm(range(reps)):
+        
+        output = []
+        for i in tqdm(range(N_iter)):
+
+            output += perform_iteration(X, K)
+            output_cov += perform_iteration(X, K, out='cov')
+
+        Os = [O_iter for O_iter, _ in output if O_iter is not None]
+        Ts = [T_iter for _, T_iter in output if T_iter is not None]
+        Covs = [Cov_iter for Cov_iter, _ in output if Cov_iter is not None]
+
+        O = sum(Os)/len(Os)
+        T = sum(Ts)/len(Ts)
+
+        # NEED TO FINISH
+        # Ls[r] = log_likelihood(O, T, ...)
+        # min_neg_lolik = min(Ls)
+        # if min_neg_log_like == Ls[r]
+        #     best_params = = X, log_T, log_t0, M, L_dense
+        # get covariance matrix
+
+        return Ls, best_params
 
 
-def run(X: np.ndarray, k: int, verbose: bool = False, N_iter: int = 1000,
-        reps: int = 20, )
+
+# %%
