@@ -1,6 +1,7 @@
 .vscode/
 output/
 aws.json
+hpc_data/
 
 # --------------------------------------
 
