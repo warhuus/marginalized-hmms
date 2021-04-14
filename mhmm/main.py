@@ -16,17 +16,13 @@ from . import train
 
 def main(opt):
 
-    N = opt['N']
-    D = opt['D']
-    K = opt['K']
-    cov_rank = opt['K']
-    state_length = opt['state_length']
-    var = opt['var']
-
     # create data
     if opt.get('data') == 'hcp':
-        raise NotImplementedError
-        X = data.hcp.get(opt)
+        X = data.hcp.load(opt)
+        opt['subjects'] = 200 if opt.get('subjects') is None else opt['subjects']
+        opt['N'] = opt.get('subjects') * 405
+        opt['D'] = 50
+
     else:
         X = data.toy.create(opt, return_type='tensor')
 
