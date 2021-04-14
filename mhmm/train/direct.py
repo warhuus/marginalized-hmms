@@ -142,7 +142,7 @@ def run(X: torch.tensor, algo: str, K: int, lengths: Optional[List] = None,
         if min_neg_loglik in Log_like:
            best_params = log_T, log_t0, M, L_dense
         
-        Ls[r, :] = Log_like
+        Ls[r, :] = Log_like / len(lengths)
 
     # take observations from the best model
     log_T, log_t0, M, L_dense = best_params
