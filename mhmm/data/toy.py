@@ -6,17 +6,8 @@ from hmmlearn import hmm
 from scipy.stats import multivariate_normal
 import matplotlib.pyplot as plt
 
-from . import plot
+from .. import plot
 
-
-def make_lengths(opt: dict) -> list:
-    """ Make list of lengths of sequences """
-    try:
-        N_seq = opt['N_seq']
-    except KeyError:
-        N_seq = 1
-
-    return [opt['N']] * N_seq
 
 def create(opt: dict, return_type: Union['tensor', 'numpy'],
            ) -> Union[torch.tensor, np.ndarray]:

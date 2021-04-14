@@ -37,7 +37,7 @@ def main(opt):
     except KeyError:
         raise NotImplementedError
 
-    output = method(X, data.make_lengths(opt), **opt)
+    output = method(X, lengths=data.utils.make_lengths(opt), **opt)
 
     # plot - broken for now
     # plot.diagnostics(*output, X.T, N, K)
