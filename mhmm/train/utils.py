@@ -68,7 +68,7 @@ def fill_hmmlearn_params(model: hmm.GaussianHMM, log_T: torch.tensor,
 
     assert M.shape[1] == K
     assert log_t0.shape == (K,)
-    assert L_dense.shape[1] == K
+    assert L_dense.shape[0] == K
 
     # normalize if not yet normalized
     if not torch.allclose(log_T.exp().sum(1), torch.tensor([1.] * K), atol=0.01):
