@@ -101,7 +101,7 @@ def run(X: torch.tensor, lengths: list, N: int, D: int, K: int, algo: str,
     min_neg_loglik = 1e10
     Ls = np.empty((reps, N_iter))
 
-    assert X.shape == (D, lengths[0])
+    assert X.shape == (D, N)
 
     for r in tqdm(range(reps)):
 
