@@ -1,0 +1,8 @@
+{
+    "data": "hcp",
+    "subjects": 100,
+    "D": 50,
+    "K": 3,
+    "N_iter": 50,
+    "reps": 1
+}
