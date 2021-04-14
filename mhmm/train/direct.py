@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, List
 
 import torch
 import numpy as np
@@ -80,9 +80,9 @@ def calc_logprob_save(x, log_T, log_t0, M, L_dense):
     return - model.score(x.detach().cpu().numpy().astype(np.float64).T)
 
 
-def run(X: torch.tensor, lengths: list, N: int, D: int, K: int, algo: str,
-        bs: Optional[int] = None, N_iter: int = 1000, reps: int = 20,
-        **kwargs):
+def run(X: torch.tensor, algo: str, K: int, lengths: Optional[List] = None,
+        N: Optional[int] = None, D: Optional[int] = None, bs: Optional[int] = None,
+        N_iter: int = 1000, reps: int = 20, **kwargs):
     """ Train an HMM model using direct optimization """
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
