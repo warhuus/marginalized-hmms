@@ -1,6 +1,6 @@
 import io
 import sys
-from typing import Union
+from typing import Union, List, Optional
 
 import torch
 from hmmlearn import hmm
@@ -9,9 +9,8 @@ from tqdm import tqdm
 
 from . import utils
 
-def run(X: torch.tensor, lengths: list, K: int, D: int,
-        algo: Union['viterbi', 'map'], N_iter: int = 1000,
-        reps: int = 20, **kwargs):
+def run(X: torch.tensor, algo: Union['viterbi', 'map'], K: int, lengths: Optional[int],
+        D: Optional[int], N_iter: int = 1000, reps: int = 20, **kwargs):
     """ Train an HMM model using EM with hmmlearn """
 
     min_neg_loglik = 1e10
