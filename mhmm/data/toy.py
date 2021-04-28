@@ -26,12 +26,14 @@ def create(opt: dict, return_type: Union['tensor', 'numpy'],
             'numpy': X}[return_type]
 
 def fake(N: int, D: int, K: int, cov_rank: int, state_length: int,
-         var: float, N_seq: int = 1, **kwargs) -> np.ndarray:
+         var: float, N_seq: int = 1, seed: int = 0, **kwargs) -> np.ndarray:
     """
     Make 'fake' sequential data using Mikkel's original example. Shape
     of returned data is (N, D).
     """
     assert (N // (K * state_length)) % 1 == 0
+
+    np.random.seed(seed)
 
     # define params
     M = np.ones((K, D)) * np.arange(K)[:, None]
@@ -54,8 +56,10 @@ def fake(N: int, D: int, K: int, cov_rank: int, state_length: int,
     return X
 
 def dummy(N: int, D: int, K: int, var: float, N_seq: int = 1,
-          **kwargs) -> np.ndarray:
+          seed: int = 0, **kwargs) -> np.ndarray:
     """ Make real dummy data using a `\mathbf{P}` and `\mathbf{P}_0` """
+
+    np.random.seed(seed)
 
     model = hmm.GaussianHMM(K, 'full', init_params='')
 
@@ -85,11 +89,13 @@ def dummy(N: int, D: int, K: int, var: float, N_seq: int = 1,
     return X
                 
 def hard_dummy(N: int, D: int, K: int, N_seq: int = 1, which_hard: int = 0,
-               **kwargs) -> np.ndarray:
+               seed: int = 0, **kwargs) -> np.ndarray:
     """ Make real dummy data using a `\mathbf{P}` and `\mathbf{P}_0` """
 
+    np.random.seed(seed)
+
     D = 2
-    K = 3
+    K = 2
 
     model = hmm.GaussianHMM(K, 'full', init_params='')
 
@@ -103,14 +109,11 @@ def hard_dummy(N: int, D: int, K: int, N_seq: int = 1, which_hard: int = 0,
 
     # make mean and covariance matrices
     model.means_ = np.array([[3, 4],
-                             [5, 7],
-                             [1, 2]])
+                             [5, 7]])
     cov_base = np.array([[[2, 0.5],
                           [0.5, 2]],
                          [[1.5, -0.3],
-                          [-0.3, 4]],
-                         [[0.5, -1],
-                          [-1, 2.5]]])
+                          [-0.3, 4]]])
     model.covars_ = [cov_base, cov_base/2, cov_base*2][which_hard]
 
     # make sequences
