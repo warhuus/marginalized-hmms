@@ -28,8 +28,10 @@ def main(opt):
 
     # train
     try:
-        method = {'direct': train.direct.run, 'map': train.hmm_.run,
-                  'viterbi': train.hmm_.run}[opt['algo']]
+        method = {'direct': train.direct.run,
+                  'map': train.hmm_.run,
+                  'viterbi': train.hmm_.run,
+                  'mom': train.mom_.run}[opt['algo']]
     except KeyError:
         raise NotImplementedError
 
