@@ -10,5 +10,8 @@ setup(
                         'numpy',
                         'matplotlib',
                         'hmmlearn',
-                        'tqdm']
+                        'tqdm',
+                        'mom',
+                        'scikit-learn'],
+      dependency_links=['https://github.com/warhuus/method-of-moments']
       )
