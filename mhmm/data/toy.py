@@ -100,11 +100,10 @@ def hard_dummy(N: int, D: int, K: int, N_seq: int = 1, which_hard: int = 0,
     model = hmm.GaussianHMM(K, 'full', init_params='')
 
     # make transition probability matrices
-    model.startprob_ = np.repeat(1/3, K)
+    model.startprob_ = np.repeat(1/2, K)
 
-    P = np.array([[0.8, 0.1, 0.1],
-                  [0.4, 0.2, 0.4],
-                  [1/3, 1/3, 1/3]])
+    P = np.array([[0.8, 0.2],
+                  [0.4, 0.6]])
     model.transmat_ = P
 
     # make mean and covariance matrices
