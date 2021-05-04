@@ -12,6 +12,7 @@ setup(
                         'hmmlearn',
                         'tqdm',
                         'mom',
-                        'scikit-learn'],
+                        'scikit-learn',
+                        'GitPython'],
       dependency_links=['https://github.com/warhuus/method-of-moments']
       )
