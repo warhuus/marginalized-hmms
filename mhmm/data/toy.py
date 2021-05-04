@@ -15,14 +15,16 @@ def create(opt: dict, return_type: Union['tensor', 'numpy'],
     """ Create data for a particular experiment """
 
     try:
-        X = {
+        data_dict = {
             'dummy': dummy, 'fake': fake
         }[opt['data']](**opt)
     except KeyError:
         raise NotImplementedError
+    
+    data_dict['X'] = {'tensor': torch.tensor(data_dict['X'], dtype=torch.float32),
+                      'numpy': data_dict['X']}[return_type]
 
-    return {'tensor': torch.tensor(X, dtype=torch.float32),
-            'numpy': X}[return_type]
+    return data_dict
 
 
 def dummy(N: int, D: int, K: int, cov_structure: str = 'full',

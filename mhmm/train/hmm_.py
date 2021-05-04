@@ -57,5 +57,10 @@ def run(X: torch.tensor, algo: Union['viterbi', 'map'], K: int, lengths: Optiona
     Cov = best_model.covars_
     _, state_probabilities = best_model.score_samples(X, lengths=lengths)
 
-    return Ls, log_T, log_t0, M, Cov, state_probabilities
+    return {'log_likelihood': Ls,
+            'log_T': log_T,
+            'log_t0': log_t0,
+            'M': M,
+            'covariances': Cov,
+            'state_probabilities': state_probabilities}
 

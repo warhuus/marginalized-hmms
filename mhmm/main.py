@@ -20,8 +20,9 @@ def main(opt):
     if opt.get('data') == 'hcp':
         X = data.hcp.load(opt)
         opt['subjects'] = 200 if opt.get('subjects') is None else opt['subjects']
-        opt['N'] = opt.get('subjects') * 405
+        opt['N'] = 405
         opt['D'] = 50
+        opt['N_seq'] = opt.get('subjects')
 
     else:
         data_dict = data.toy.create(opt, return_type='tensor')
@@ -40,9 +41,8 @@ def main(opt):
     output = method(data_dict['X'], lengths=data.utils.make_lengths(opt), **opt)
 
     # plot - broken for now
-    # plot.diagnostics(*output, X.T, N, K)
-    # if opt['show']:
-    #     plt.show()
+    if opt['show']:
+        plot.diagnostics(*output, opt['K'])
    
     # save
     now = datetime.datetime.now()
@@ -50,12 +50,9 @@ def main(opt):
     path = os.path.join(os.getcwd(), "output", now.strftime("%m_%d"))
     if not os.path.isdir(path):
         os.mkdir(path)
-    
-    Lr, log_T, log_t0, M, Cov, state_probabilities = output
+
     with open(os.path.join(path, f'{now.strftime("%H_%M_%S")}_{opt["algo"]}.pickle'), 'wb') as f:
         pickle.dump({
-            **{"Lr": Lr, "log_T": log_T, "log_t0": log_t0, 
-               "M": M, "Cov": Cov, "state_probabilities": state_probabilities
-               },
+            **output
             **opt,
             **data_dict}, f)

@@ -24,10 +24,10 @@ def toy_data(X0):
 
 
 def diagnostics(Lr, log_T, log_t0, M, Cov, state_probabilites,
-                X0, num_observations, num_states):
+                num_states):
     # log likelihood
     plt.figure('Objective').clf()
-    plt.plot(Lr)
+    plt.plot(Lr.T)
     drawnow()
 
     # covariance matrices
@@ -55,6 +55,8 @@ def diagnostics(Lr, log_T, log_t0, M, Cov, state_probabilites,
     plt.imshow(state_probabilites.T, aspect='auto', interpolation='none')
     drawnow()
 
+    plt.show()
+
 
 def get_latest(num, outputdir):
 
@@ -77,19 +79,31 @@ def plot_latest(opt):
     fig, ax = plt.subplots()
 
     # get log-likelihood from latest files
-    colors = ['r', 'b']
+    colors = ['r', 'b', 'g']
     for i, outfile in enumerate(outfiles):
         with open(outfile, 'rb') as f:
             outdict = pickle.load(f)
         _ = ax.plot(np.arange(outdict['Lr'].shape[1]) + 1, outdict['Lr'].mean(0),
-                    label=f"{outdict['algo']}: minimum = {round(np.nanmin(outdict['Lr']), 1)}", color=colors[i])
+                    label=f"{outdict['algo']}: minimum = {round(np.nanmin(outdict['Lr']), 1)}",
+                    color=colors[i])
         
         for r in range(outdict['Lr'].shape[0]):
             _ = ax.plot(np.arange(outdict['Lr'].shape[1]) + 1, outdict['Lr'][r, :],
                         color=colors[i], alpha=0.3)
-        
+
     ax.legend(loc="upper right")
     ax.set_xlabel("iterations")
     ax.set_ylabel("log-likelihood")
-    ax.set_title("average log-likelihood over reps")
-    plt.show()
+    ax.set_title((f"which-hard={outdict.get('which_hard')}, "
+                  + f"lr={outdict.get('lrate')}, "
+                  + f"seed={outdict.get('seed')}"))
+
+    today = datetime.now().strftime("%m_%d")
+    if not os.path.isdir(os.path.join(opt.outputdir, today, "plots")):
+        os.mkdir(os.path.join(opt.outputdir, today, "plots"))
+
+    plt.savefig(os.path.join(opt.outputdir, today, "plots",
+        (f"hard={outdict.get('which_hard')}_lr={outdict.get('lrate')}_"
+         + f"seed={outdict.get('seed')}_reps={outdict.get('reps')}.png")
+        )
+    )

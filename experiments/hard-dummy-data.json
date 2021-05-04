@@ -1,12 +1,15 @@
 {
-    "data": "hard_dummy",
-    "which_hard": 2,
-    "N": 500,
+    "data": "dummy",
+    "N": 100,
     "D": 2,
-    "K": 3,
-    "cov_rank": 0,
-    "state_length": 10,
-    "var": 0.1,
-    "N_iter": 400,
-    "reps": 3
+    "K": 2,
+    "N_iter": 150,
+    "reps": 1,
+    "seed": 0,
+    "data_seed": 4,
+    "plot_data": 1,
+    "lrate": 0.05,
+    "show": 0,
+    "N_seq": 25,
+    "optimizer": "LBFGS"
 }

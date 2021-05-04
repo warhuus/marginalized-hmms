@@ -9,28 +9,20 @@ if __name__ == '__main__':
     parser.add_argument('--algo', default='direct',
                         help='''The algorithm to use when training. Can be
                              one of either "viterbi", "map" or "direct".''')
-    parser.add_argument('--show', default=0,
-                        help='''Whether to show the plots immediately
-                                or not (0 or 1).''', 
-                        type=int)
-    parser.add_argument('--plotdata', default=0,
-                        help='''Whether to show a plot of the dummy data
-                                or not (0 or 1).''', 
-                        type=int)
-    parser.add_argument('--data', default='dummy',
-                        help='''Which data to use. Can be either "fake" or
-                             "dummy".''', 
-                        type=str)
     parser.add_argument('--exp', default='fake-data',
                         help='''Which experiment to use.
                              ''', 
                         type=str)
-    
+    parser.add_argument('--lrate', default=0.01, type=float)
+    parser.add_argument('--seed', default=0, type=int)
+
     opt = vars(parser.parse_args())
 
     with open(f'experiments/{opt["exp"]}.json') as json_file:
         experiment_args = json.load(json_file)
 
-    _ = opt.update(experiment_args)
+    opt.update(experiment_args)
+
+    print(opt, '\n\n')
 
     main.main(opt)

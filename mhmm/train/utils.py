@@ -9,7 +9,7 @@ from scipy import linalg
 from .. import ops
 
 
-def get_D_from_L_dense(L_dense: torch.tensor) -> tuple:
+def get_D_from_L_dense(L_dense: torch.tensor) -> int:
     """ Get number of dimensions from L_dense """
     L_dense_np = L_dense.detach().cpu().numpy()
     return int(np.sqrt(L_dense_np.shape[1] * 8 + 1) - 1) // 2
@@ -25,8 +25,24 @@ def L_dense_to_cov(L_dense: torch.tensor) -> np.ndarray:
 
     L = np.tile(triangular, (K, 1, 1))
     L[:, triangular == 1] = L_dense.detach().cpu().numpy()
+    cov = np.array([L_k @ L_k.T for L_k in L])
 
-    return np.array([L_k @ L_k.T for L_k in L])
+    return cov
+
+
+def cov_to_L_dense(cov: np.ndarray, par: dict = {}) -> torch.tensor:
+    """ Make lower triangular tensor representation from covariance numpy"""
+
+    # get L_dense
+    K, D, _ = cov.shape
+
+    L = [linalg.cholesky(cov[k], lower=True) for k in range(K)]
+    L_dense = torch.tensor([L[k][np.tril(np.ones((D, D))) == 1].tolist()
+                            for k in range(K)], **par)
+
+    assert np.allclose(cov, L_dense_to_cov(L_dense))
+
+    return L_dense
     
 
 def init_params(K: int, D: int, par: dict = {}, cluster_init: bool = True,
@@ -39,7 +55,7 @@ def init_params(K: int, D: int, par: dict = {}, cluster_init: bool = True,
         assert X.shape[1] == D
 
     # make cluster means
-    if cluster_init:
+    if cluster_init and X is not None:
         kmeans = cluster.KMeans(n_clusters=K)
         kmeans.fit(X)
         M = torch.tensor(kmeans.cluster_centers_.T
@@ -71,9 +87,9 @@ def fill_hmmlearn_params(model: hmm.GaussianHMM, log_T: torch.tensor,
     assert L_dense.shape[0] == K
 
     # normalize if not yet normalized
-    if not torch.allclose(log_T.exp().sum(1), torch.tensor([1.] * K), atol=0.01):
+    if not torch.allclose(log_T.exp().sum(0), torch.ones(K), atol=0.01):
         log_T = log_T - ops.logsum(log_T)
-    if not torch.allclose(log_t0.exp().sum(), torch.tensor([1.]), atol=0.01):
+    if not torch.allclose(log_t0.exp().sum(), torch.ones(K), atol=0.01):
         log_t0 = log_t0 - ops.logsum(log_t0)
 
     T, t0, M = [param.detach().cpu().numpy().astype(np.float64)
@@ -85,6 +101,9 @@ def fill_hmmlearn_params(model: hmm.GaussianHMM, log_T: torch.tensor,
 
     # set means
     model.means_ = M
+
+    if np.isnan(L_dense_to_cov(L_dense)).any():
+        print('woah there!')
 
     # set covars
     model.covars_ = L_dense_to_cov(L_dense)

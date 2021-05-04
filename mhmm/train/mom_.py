@@ -1,92 +1,60 @@
 from tqdm import tqdm
-from scipy import linalg
 from mom import mom
-from direct import calc_logprob_save
+import numpy as np
+import torch
 
-from .. import ops
+from . import direct
+from . import utils
 
 
-def run(X: np.ndarray, K: int, D: int, verbose: bool = False, N_iter: int = 1000,
-        reps: int = 20, **kwargs):
+def run(X: np.ndarray, K: int, D: int, algo: str, lengths: int, verbose: bool = False,
+        N_iter: int = 1000, pytorch_N_iter: int = 1000, reps: int = 20,
+        lrate: float = 0.001, **kwargs):
     ''' Run multiple iterations and reps of the mom algorithm '''
 
-    assert D == X.shape[0]
+    assert D == X.shape[1]
     assert K <= D
+        
+    min_neg_loglik = 1e10
     
-    Ls = np.empty(reps)
+    Ls = np.empty((reps, N_iter))
     for r in tqdm(range(reps)):
-        
-        output = []
-        for i in tqdm(range(N_iter)):
             
-            # transform X to include flattened covariances
-            X_tilde = mom.transform(X.T)
+        # transform X to include flattened covariances
+        X_tilde = mom.transform(X)
+        assert X_tilde.shape == (len(X), D + D*(1 + D) // 2)
 
-            assert X_tilde.shape == (len(X), D + D*(1 + D) // 2)
+        # run Algorithm B
+        O = None
+        while O is None:
+            O, _ = mom.run_algorithm_B(X_tilde, K, verbose=True)
+    
+        M, Sigma = mom.separate_means_and_sigma(O, D, K)
 
-            # run Algorithm B
-            output += mom.run_algorithm_B(X_tilde, K)
+        output = direct.run(X, algo, K, lengths, D=D, N_iter=N_iter,
+                            params_to_train='transition_probabilities',
+                            reps=1, lrate=lrate, M=M, Sigma=Sigma)
+        Log_like, log_T, log_t0, M_out, Cov_out, posteriors = output
 
-        Os = [O_iter for O_iter, _ in output if O_iter is not None]
-        Ts = [T_iter for _, T_iter in output if T_iter is not None]
+        assert np.allclose(M_out, M)
+        assert np.allclose(Cov_out, Sigma)
+        assert Log_like.shape == (1, N_iter)
 
-        O = sum(Os) / len(Os)
-        T = sum(Ts) / len(Ts)
+        # update the minimum negative log-likelihood
+        if Log_like.min() < min_neg_loglik:
+            min_neg_loglik = Log_like.min()
+            best_params = log_T, log_t0, M, Cov_out
+            best_posteriors = posteriors
         
-        means = O[:D]
-        covs_flat = O[D:]
+        Ls[r, :] = Log_like.ravel()
+    
+    log_T, log_t0, M, Cov_out = best_params
+    L_dense = utils.cov_to_L_dense(Cov_out)
 
-        assert covs_flat.shape[1] == D*(D + 1) // 2
-        
-        L_dense = []
-        for k in range(K):
-            cov_tril = np.empty((D, D))
-            cov_tril[np.tril(np.ones((D, D))) == 1] = cov_flat[k]
-            cov_k = cov_tril + cov_tril.T
-            cov_k = cov_k - np.diag(cov_k) / 2
+    return {'log_likelihood': Ls,
+            'log_T': log_T,
+            'log_t0': log_t0,
+            'M': M,
+            'covariances': Cov_out,
+            'state_probabilities': best_posteriors}
 
-            assert cov_k[0, 1] == covs_flat[k, 1]
-            assert (cov_k.T == cov_k).all()
-
-            L = linalg.cholesky(cov_k, lower=True)
-            L_dense += L[np.tril(np.ones((D, D))) == 1].tolist()
-
-        
-        Exp_X3_hat = X_tilde[2:].mean(axis=0)
-        M3_hat = O.dot(T)
-        w_hat = np.linalg.pinv(M3_hat).dot(Exp_X3_hat)
-        pi_hat = np.linalg.inv(T).dot(w_hat).to_list()
-
-        log_t0 = (torch.tensor(pi_hat) + 1e-20).log()
-        log_T = (torch.tensor(T.T) + 1e-20).log()
-
-        log_T = ulog_T - ops.logsum(ulog_T)
-        log_t0 = ulog_t0 - ops.logsum(ulog_t0)
-
-        M = torch.tensor(means.T)
-        log_lik, posteriors = model_for_state_probs.score_samples(X.T)
-        Ls[r] = -log_lik
-
-        min_neg_lolik = min(Ls)
-        if min_neg_log_like == Ls[r]
-            best_params = (log_T, log_t0, M, L_dense)
-
-    # take observations from the best model
-    log_T, log_t0, M, L_dense = best_params
-
-    # get covariance matrix
-    Cov = utils.L_dense_to_cov(L_dense)
-
-    # get state probabilities - I wouldn't trust these, at least not
-    # at the moment
-    model_for_state_probs = utils.fill_hmmlearn_params(
-        hmm.GaussianHMM(K, 'full', algorithm=algo, init_params=''),
-        log_T, log_t0, M, L_dense
-    )
-    _, posteriors = model_for_state_probs.score_samples(X.T)
-
-    return Ls, log_T, log_t0, M.detach().cpu().numpy(), Cov, posteriors
-
-
-
-# %%
