@@ -1,15 +1,14 @@
 #%% import
 import os
 import os.path as path
-
-import git
+s
 import nibabel as nib
 from nilearn import image
 import matplotlib.pyplot as plt
 import numpy as np
 
 #%% find data
-repo = git.Repo('.', search_parent_directories=True)
+repo = ''
 upper_data_path = path.join(
     '..',
     'hcpdata',

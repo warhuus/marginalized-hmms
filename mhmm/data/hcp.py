@@ -5,10 +5,9 @@ from functools import wraps
 import torch
 import numpy as np
 import scipy.io as io
-import git
 
 
-REPO = git.Repo('.', search_parent_directories=True).working_tree_dir
+REPO = ''
 DATA_PATH = os.path.join(REPO, 'hcp_data', 'for_python')
 
 
