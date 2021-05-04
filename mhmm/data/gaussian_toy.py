@@ -135,7 +135,6 @@ def hard_dummy(N: int, D: int, K: int, N_seq: int = 1, which_hard: int = 0,
         ax.contour(x, y, densities[i].pdf(pos), levels=3, colors='k')
         ax.plot(X[:, 0][Z == i], X[:, 1][Z == i], '*' + ['r', 'g', 'b'][i])
     plt.grid()
-    plt.show()
 
     return X
                 
