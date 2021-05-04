@@ -24,7 +24,9 @@ def main(opt):
         opt['D'] = 50
 
     else:
-        X = data.toy.create(opt, return_type='tensor')
+        data_dict = data.toy.create(opt, return_type='tensor')
+
+    assert data_dict['X'].shape == (opt['N']*opt['N_seq'], opt['D'])
 
     # train
     try:
@@ -35,7 +37,7 @@ def main(opt):
     except KeyError:
         raise NotImplementedError
 
-    output = method(X, lengths=data.utils.make_lengths(opt), **opt)
+    output = method(data_dict['X'], lengths=data.utils.make_lengths(opt), **opt)
 
     # plot - broken for now
     # plot.diagnostics(*output, X.T, N, K)
@@ -50,8 +52,10 @@ def main(opt):
         os.mkdir(path)
     
     Lr, log_T, log_t0, M, Cov, state_probabilities = output
-    with open(os.path.join(path, now.strftime("%H_%M_%S") + ".pickle"), 'wb') as f:
-        pickle.dump(
-            {"Lr": Lr, "log_T": log_T, "log_t0": log_t0,
-             "M": M, "Cov": Cov, "state_probabilities": state_probabilities,
-             "data": opt["data"], "algo": opt["algo"]}, f)
+    with open(os.path.join(path, f'{now.strftime("%H_%M_%S")}_{opt["algo"]}.pickle'), 'wb') as f:
+        pickle.dump({
+            **{"Lr": Lr, "log_T": log_T, "log_t0": log_t0, 
+               "M": M, "Cov": Cov, "state_probabilities": state_probabilities
+               },
+            **opt,
+            **data_dict}, f)
