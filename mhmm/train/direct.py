@@ -141,6 +141,8 @@ def run(X: torch.tensor, algo: str, K: int, optimizer: str = 'adam', momentum: O
             M = torch.tensor(M.copy(), dtype=torch.float32)
             L_dense = utils.cov_to_L_dense(Sigma, par)
 
+        ulog_T, ulog_t0, M, L_dense = (param.to(device) for param in [ ulog_T, ulog_t0, M, L_dense])
+
         # Prepare log-likelihood save and loop generator
         Log_like = np.zeros(N_iter)
 
