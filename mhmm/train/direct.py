@@ -86,7 +86,7 @@ def calc_logprob_save(x, log_T, log_t0, M, L_dense, device):
     assert utils.get_D_from_L_dense(L_dense) == D
 
     model = hmm.GaussianHMM(K, 'full', init_params='')
-    model = utils.fill_hmmlearn_params(model, log_T, log_t0, M, L_dense)
+    model = utils.fill_hmmlearn_params(model, log_T, log_t0, M, L_dense, device)
 
     return - model.score(x.detach().cpu().numpy().astype(np.float64).T)
 
@@ -211,7 +211,7 @@ def run(X: torch.tensor, algo: str, K: int, optimizer: str = 'adam', momentum: O
     # at the moment
     model_for_state_probs = utils.fill_hmmlearn_params(
         hmm.GaussianHMM(K, 'full', algorithm=algo, init_params=''),
-        log_T, log_t0, M, L_dense
+        log_T, log_t0, M, L_dense, device
     )
     _, posteriors = model_for_state_probs.score_samples(X)
 
