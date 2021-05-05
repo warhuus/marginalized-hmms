@@ -66,7 +66,7 @@ def init_params(K: int, D: int, par: dict = {}, cluster_init: bool = True,
         M = torch.randn((D, K), **par)
 
     # make covariance matrix
-    cv = np.cov(X_numpy) + 1e-5 * np.eye(D)
+    cv = np.cov(X_numpy.T) + 1e-5 * np.eye(D)
     L = linalg.cholesky(cv, lower=True)
     L_dense = torch.tensor([L[np.tril(np.ones((D, D))) == 1].tolist()
                               for k in range(K)], **par)
