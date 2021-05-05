@@ -54,17 +54,19 @@ def init_params(K: int, D: int, par: dict = {}, cluster_init: bool = True,
     if X is not None:
         assert X.shape[1] == D
 
+    X_numpy = X.clone().detach().cpu().numpy()
+
     # make cluster means
     if cluster_init and X is not None:
         kmeans = cluster.KMeans(n_clusters=K)
-        kmeans.fit(X)
+        kmeans.fit(X_numpy)
         M = torch.tensor(kmeans.cluster_centers_.T
                          + np.random.normal(size=(D, K)), **par)
     else:
         M = torch.randn((D, K), **par)
 
     # make covariance matrix
-    cv = np.cov(X.numpy().T) + 1e-5 * np.eye(D)
+    cv = np.cov(X_numpy) + 1e-5 * np.eye(D)
     L = linalg.cholesky(cv, lower=True)
     L_dense = torch.tensor([L[np.tril(np.ones((D, D))) == 1].tolist()
                               for k in range(K)], **par)
