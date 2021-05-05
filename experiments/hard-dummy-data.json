@@ -3,13 +3,13 @@
     "N": 100,
     "D": 2,
     "K": 2,
-    "N_iter": 150,
+    "N_iter": 2,
     "reps": 1,
     "seed": 0,
     "data_seed": 4,
     "plot_data": 1,
     "lrate": 0.05,
     "show": 0,
-    "N_seq": 25,
+    "N_seq": 2,
     "optimizer": "LBFGS"
 }

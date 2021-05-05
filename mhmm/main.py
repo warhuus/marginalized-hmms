@@ -51,8 +51,10 @@ def main(opt):
     if not os.path.isdir(path):
         os.mkdir(path)
 
-    with open(os.path.join(path, f'{now.strftime("%H_%M_%S")}_{opt["algo"]}.pickle'), 'wb') as f:
+    save_name = f'{now.strftime("%H_%M_%S")}_{opt["algo"]}_{opt.get("optimizer")}.pickle'
+
+    with open(os.path.join(path, save_name), 'wb') as f:
         pickle.dump({
-            **output
+            **output,
             **opt,
             **data_dict}, f)

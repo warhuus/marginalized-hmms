@@ -9,7 +9,7 @@ from .. import ops
 from . import utils
 
 
-def log_mv_normal(x: torch.tensor, M: torch.tensor, L_dense: torch.tensor, device, par):
+def log_mv_normal(x: torch.tensor, M: torch.tensor, L_dense: torch.tensor, device):
     """
     X : D x N
     M : D x K
@@ -21,9 +21,8 @@ def log_mv_normal(x: torch.tensor, M: torch.tensor, L_dense: torch.tensor, devic
     log_prob = torch.empty((N, K))
 
     for k in range(K):
-        
-        L = torch.zeros((D, D), **par)
-        L[torch.tril(torch.ones((D, D)).to(par['device'])) == 1] = L_dense[k]
+        L = torch.zeros((D, D), dtype=torch.float32, device=device)
+        L[torch.tril(torch.ones((D, D)).to(device)) == 1] = L_dense[k]
 
         cv_log_det = 2 * torch.log(torch.diagonal(L)).sum()
         cv_sol = torch.triangular_solve((x.t() - M.t()[k]).t(), L,
@@ -53,12 +52,12 @@ def calc_emissionprob_mikkel(x, m, v, s, device):
     return e
 
 
-def calc_logprob_optim(x, log_T, log_t0, M, L_dense, par):
+def calc_logprob_optim(x, log_T, log_t0, M, L_dense, device):
     """
     Calculate the log-likelihood of the obersvations under the
     model using Mikkel's original function in PyTorch.
     """
-    E = log_mv_normal(x, M, L_dense, par)
+    E = log_mv_normal(x, M, L_dense, device)
     log_p = log_t0 + E[0]    
     for n in range(1, E.shape[0]):
         log_p = torch.squeeze(ops.logsum(log_p + log_T, dim=1)) + E[n]
