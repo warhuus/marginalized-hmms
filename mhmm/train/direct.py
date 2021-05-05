@@ -18,7 +18,7 @@ def log_mv_normal(x: torch.tensor, M: torch.tensor, L_dense: torch.tensor, devic
 
     D, N = x.shape
     K = M.shape[1]
-    log_prob = torch.empty((N, K))
+    log_prob = torch.empty((N, K), dtype=torch.float32, device=device)
 
     for k in range(K):
         L = torch.zeros((D, D), dtype=torch.float32, device=device)
