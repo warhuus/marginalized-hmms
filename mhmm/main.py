@@ -14,7 +14,7 @@ from . import data
 from . import train
 
 
-def main(opt):
+def main(opt, dir=None):
 
     # create data
     if opt.get('data') == 'hcp':
@@ -48,8 +48,12 @@ def main(opt):
     now = datetime.datetime.now()
 
     path = os.path.join(os.getcwd(), "output", now.strftime("%m_%d"))
-    if not os.path.isdir(path):
-        os.mkdir(path)
+    try:
+        if not os.path.isdir(path):
+            os.mkdir(path)
+    except FileNotFoundError:
+        if not os.path.isdir("output"):
+            os.mkdir(path)
 
     save_name = f'{now.strftime("%H_%M_%S")}_{opt["algo"]}_{opt.get("optimizer")}.pickle'
 
