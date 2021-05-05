@@ -9,7 +9,7 @@ from .. import ops
 from . import utils
 
 
-def log_mv_normal(x: torch.tensor, M: torch.tensor, L_dense: torch.tensor):
+def log_mv_normal(x: torch.tensor, M: torch.tensor, L_dense: torch.tensor, device):
     """
     X : D x N
     M : D x K
@@ -23,7 +23,7 @@ def log_mv_normal(x: torch.tensor, M: torch.tensor, L_dense: torch.tensor):
     for k in range(K):
         
         L = torch.zeros((D, D))
-        L[torch.tril(torch.ones((D, D))) == 1] = L_dense[k]
+        L[torch.tril(torch.ones((D, D)).to(device)) == 1] = L_dense[k]
 
         cv_log_det = 2 * torch.log(torch.diagonal(L)).sum()
         cv_sol = torch.triangular_solve((x.t() - M.t()[k]).t(), L,
@@ -53,12 +53,12 @@ def calc_emissionprob_mikkel(x, m, v, s, device):
     return e
 
 
-def calc_logprob_optim(x, log_T, log_t0, M, L_dense):
+def calc_logprob_optim(x, log_T, log_t0, M, L_dense, device):
     """
     Calculate the log-likelihood of the obersvations under the
     model using Mikkel's original function in PyTorch.
     """
-    E = log_mv_normal(x, M, L_dense)
+    E = log_mv_normal(x, M, L_dense, device)
     log_p = log_t0 + E[0]    
     for n in range(1, E.shape[0]):
         log_p = torch.squeeze(ops.logsum(log_p + log_T, dim=1)) + E[n]
@@ -66,7 +66,7 @@ def calc_logprob_optim(x, log_T, log_t0, M, L_dense):
     return L
 
 
-def calc_logprob_save(x, log_T, log_t0, M, L_dense):
+def calc_logprob_save(x, log_T, log_t0, M, L_dense, device):
     """
     Calculate the neg log-likelihood of observations under the model
     using hmmlearn.
@@ -80,8 +80,8 @@ def calc_logprob_save(x, log_T, log_t0, M, L_dense):
     D, K = M.shape
 
     # make hmmlearn model and fill
-    assert torch.allclose(log_T.exp().sum(0), torch.ones(M.shape[1]))
-    assert torch.allclose(log_t0.exp().sum(), torch.ones(M.shape[1]))
+    assert torch.allclose(log_T.exp().sum(0), torch.ones(M.shape[1]).to(device))
+    assert torch.allclose(log_t0.exp().sum(), torch.ones(M.shape[1]).to(device))
     assert L_dense.shape[0] == K
     assert utils.get_D_from_L_dense(L_dense) == D
 
@@ -141,8 +141,6 @@ def run(X: torch.tensor, algo: str, K: int, optimizer: str = 'adam', momentum: O
             M = torch.tensor(M.copy(), dtype=torch.float32)
             L_dense = utils.cov_to_L_dense(Sigma, par)
 
-        ulog_T, ulog_t0, M, L_dense = (param.to(device) for param in [ulog_T, ulog_t0, M, L_dense])
-
         # Prepare log-likelihood save and loop generator
         Log_like = np.zeros(N_iter)
 
@@ -179,17 +177,17 @@ def run(X: torch.tensor, algo: str, K: int, optimizer: str = 'adam', momentum: O
                 old_M = M.clone().detach().requires_grad_()
 
                 # calc and save log-likelihood using hmmlearn
-                Log_like[i] += calc_logprob_save(x, log_T, log_t0, M, L_dense)
+                Log_like[i] += calc_logprob_save(x, log_T, log_t0, M, L_dense, device)
                 
                 if optimizer != 'LBFGS':
                     optimizer_.zero_grad()
-                    Li_optim = calc_logprob_optim(x, log_T, log_t0, M, L_dense)
+                    Li_optim = calc_logprob_optim(x, log_T, log_t0, M, L_dense, device)
                     Li_optim.backward()
                     optimizer_.step()
                 else:
                     def closure():
                         optimizer_.zero_grad()
-                        Li_optim = calc_logprob_optim(x, log_T, log_t0, M, L_dense)
+                        Li_optim = calc_logprob_optim(x, log_T, log_t0, M, L_dense, device)
                         Li_optim.backward(retain_graph=True)
                         return Li_optim
                     optimizer_.step(closure=closure)
