@@ -141,7 +141,7 @@ def run(X: torch.tensor, algo: str, K: int, optimizer: str = 'adam', momentum: O
             M = torch.tensor(M.copy(), dtype=torch.float32)
             L_dense = utils.cov_to_L_dense(Sigma, par)
 
-        ulog_T, ulog_t0, M, L_dense = (param.to(device) for param in [ ulog_T, ulog_t0, M, L_dense])
+        ulog_T, ulog_t0, M, L_dense = (param.to(device) for param in [ulog_T, ulog_t0, M, L_dense])
 
         # Prepare log-likelihood save and loop generator
         Log_like = np.zeros(N_iter)
@@ -170,8 +170,8 @@ def run(X: torch.tensor, algo: str, K: int, optimizer: str = 'adam', momentum: O
                 log_T = ulog_T - ops.logsum(ulog_T)  # P[i, j] = prob FROM j TO i
                 log_t0 = ulog_t0 - ops.logsum(ulog_t0)
 
-                assert torch.allclose(log_T.exp().sum(0), torch.ones(K))
-                assert torch.allclose(log_t0.exp().sum(), torch.ones(K))
+                assert torch.allclose(log_T.exp().sum(0), torch.ones(K).to(device))
+                assert torch.allclose(log_t0.exp().sum(), torch.ones(K).to(device))
 
                 old_ulog_T = ulog_T.clone().detach().requires_grad_()
                 old_ulog_t0 = ulog_t0.clone().detach().requires_grad_()
