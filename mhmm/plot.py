@@ -62,7 +62,10 @@ def get_latest(num, outputdir):
 
     today = datetime.now().strftime("%m_%d")
 
-    files = os.listdir(os.path.join(outputdir, today))
+    try:
+        files = os.listdir(os.path.join(outputdir, today))
+    except FileNotFoundError:
+        files = os.listdir("output")
     files = [name for name in files if name.endswith('.pickle')]
     files.sort()
 
@@ -73,7 +76,7 @@ def get_latest(num, outputdir):
 def plot_latest(opt):
 
     # get latest files
-    outfiles = get_latest(opt.num, opt.outputdir)
+    outfiles = get_latest(opt['num'], opt['outputdir'])
 
     # setup plotting
     fig, ax = plt.subplots()
@@ -103,15 +106,15 @@ def plot_latest(opt):
                   + f"lr={outdict.get('lrate')}, "
                   + f"seed={outdict.get('seed')}"))
 
-    today = datetime.now().strftime("%m_%d")
-    if not os.path.isdir(os.path.join(opt.outputdir, today, "plots")):
-        os.mkdir(os.path.join(opt.outputdir, today, "plots"))
-
-    plt.savefig(os.path.join(opt.outputdir, today, "plots",
-        (f"hard={outdict.get('which_hard')}_lr={outdict.get('lrate')}_"
-         + f"seed={outdict.get('seed')}_reps={outdict.get('reps')}_"
-         + f"{datetime.now().strftime('%y%m%d_%H%M')}.png")
+    if opt['save']:
+        today = datetime.now().strftime("%m_%d")
+        if not os.path.isdir(os.path.join(opt['outputdir'], today, "plots")):
+            os.mkdir(os.path.join(opt['outputdir'], today, "plots"))
+        plt.savefig(os.path.join(opt['outputdir'], today, "plots",
+            (f"hard={outdict.get('which_hard')}_lr={outdict.get('lrate')}_"
+            + f"seed={outdict.get('seed')}_reps={outdict.get('reps')}_"
+            + f"{datetime.now().strftime('%y%m%d_%H%M')}.png")
+            )
         )
-    )
 
     plt.show()

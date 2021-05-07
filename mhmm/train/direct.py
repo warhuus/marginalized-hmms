@@ -215,15 +215,18 @@ def run(X: torch.tensor, lengths: list, K: int = 2, optimizer: str = 'adam', mom
 
                 assert not np.isnan(Log_like[i])
 
-                param_dict['ulog_T'][r] += [ulog_T]
-                param_dict['ulog_t0'][r] += [ulog_t0]
-                param_dict['M'][r] += [M]
-                param_dict['L_dense'][r] += [L_dense]
+                param_dict['ulog_T'][r] += [ulog_T.clone().detach()]
+                param_dict['ulog_t0'][r] += [ulog_t0.clone().detach()]
+                param_dict['M'][r] += [M.clone().detach()]
+                param_dict['L_dense'][r] += [L_dense.clone().detach()]
 
             # save the best model thus far
             if Log_like[i] < min_neg_loglik:
                 min_neg_loglik = Log_like[i]
-                best_params = ulog_T, ulog_t0, M, L_dense
+                best_params = (ulog_T.clone().detach(),
+                               ulog_t0.clone().detach(),
+                               M.clone().detach(),
+                               L_dense.clone().detach())
                 if torch.isnan(best_params[0]).any():
                     hi = 3
         

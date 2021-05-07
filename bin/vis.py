@@ -13,9 +13,12 @@ if __name__ == "__main__":
     parser.add_argument('--outputdir', default='output',
                         help='''The directory where to find
                                 the output files''')
+    parser.add_argument('--save', default=0,
+                        type=int,
+                        help='''Whether to save or not''')
 
     opt = parser.parse_args()
 
-    plot.plot_latest(opt)
+    plot.plot_latest(vars(opt))
 
 
