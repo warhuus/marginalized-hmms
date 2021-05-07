@@ -64,12 +64,14 @@ def get_latest(num, outputdir):
 
     try:
         files = os.listdir(os.path.join(outputdir, today))
+        outputdir = os.path.join(outputdir, today)
     except FileNotFoundError:
-        files = os.listdir("output")
+        outputdir = 'output'
+        files = os.listdir(outputdir)
     files = [name for name in files if name.endswith('.pickle')]
     files.sort()
 
-    outputs = [ os.path.join(outputdir, today, files[-i])
+    outputs = [ os.path.join(outputdir, files[-i])
                 for i in range(1, num + 1) ]
     return outputs
 
@@ -79,7 +81,7 @@ def plot_latest(opt):
     outfiles = get_latest(opt['num'], opt['outputdir'])
 
     # setup plotting
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(5, 2))
 
     plot_average = False
     # get log-likelihood from latest files
@@ -88,24 +90,26 @@ def plot_latest(opt):
     for i, outfile in enumerate(outfiles):
         with open(outfile, 'rb') as f:
             outdict = pickle.load(f)
+
+        negll = outdict['log_likelihood']
         if plot_average:
-            _ = ax.plot(np.arange(outdict['log_likelihood'].shape[1]) + 1, outdict['log_likelihood'].mean(0),
-                        label=f"{outdict['algo']}-{outdict['optimizer']}:\nminimum = {round(np.nanmin(outdict['log_likelihood']), 1)}",
+            _ = ax.plot(np.arange(negll.shape[1]) + 1, negll.mean(0),
+                        label=f"{outdict['algo']}-{outdict['optimizer']}:\nminimum = {round(np.nanmin(negll), 1)}",
                         color=colors[i])
-        min_y, max_y = min(outdict['log_likelihood'].min(), min_y), max(outdict['log_likelihood'].max(), max_y)
         
-        for r in range(outdict['log_likelihood'].shape[0]):
-            _ = ax.plot(np.arange(outdict['log_likelihood'].shape[1]) + 1, outdict['log_likelihood'][r, :],
+        for r in range(negll.shape[0]):
+            min_y, max_y = min(negll[r][~np.isnan(negll[r])].min(), min_y), max(negll[r][~np.isnan(negll[r])].max(), max_y)
+            _ = ax.plot(np.arange(negll.shape[1]) + 1, negll[r, :],
                         color=colors[i], alpha=0.2,
-                        label=f"{outdict['algo']}-{outdict['optimizer']}:\nminimum = {round(np.nanmin(outdict['log_likelihood']), 1)}" if (r == 0 and not plot_average) else None)
+                        label=f"{outdict['algo']}-{outdict['optimizer']}:\nminimum = {round(np.nanmin(negll), 1)}" if (r == 0 and not plot_average) else None)
     ax.set_ylim([min_y - 2, max_y + 100])
     ax.legend(loc="upper right")
     ax.set_xlabel("iterations")
-    ax.set_ylabel("negative log-likelihood")
+    ax.set_ylabel("-ll")
     ax.set_title((f"which-hard={outdict.get('which_hard')}, "
                   + f"lr={outdict.get('lrate')}, "
                   + f"seed={outdict.get('seed')}"))
-
+    plt.tight_layout()
     if opt['save']:
         today = datetime.now().strftime("%m_%d")
         if not os.path.isdir(os.path.join(opt['outputdir'], today, "plots")):

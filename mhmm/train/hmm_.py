@@ -5,13 +5,17 @@ from typing import Union, List, Optional
 import torch
 from hmmlearn import hmm
 import numpy as np
-from tqdm.notebook import tqdm
 
 from . import utils
 
 def run(X: torch.tensor, algo: Union['viterbi', 'map'], K: int, seed: int, lengths: Optional[int],
-        D: Optional[int], N_iter: int = 1000, reps: int = 20, **kwargs):
+        D: Optional[int], N_iter: int = 1000, reps: int = 20, where: str = 'colab', **kwargs):
     """ Train an HMM model using EM with hmmlearn """
+
+    if where == 'colab':
+        from tqdm.notebook import tqdm
+    else:
+        from tqdm import tqdm
 
     torch.manual_seed(seed)
     np.random.seed(seed)

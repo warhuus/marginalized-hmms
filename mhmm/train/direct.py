@@ -3,7 +3,6 @@ from typing import Any, Optional, List, Union
 import torch
 import numpy as np
 from hmmlearn import hmm
-from tqdm import tqdm
 
 from .. import ops
 from . import utils
@@ -54,7 +53,7 @@ def calc_emissionprob_mikkel(x, m, v, s, device):
 
 def calc_logprob_optim(x, log_T, log_t0, M, L_dense, device):
     """
-    Calculate the log-likelihood of the obersvations under the
+    Calculate the negative log-likelihood of the obersvations under the
     model using Mikkel's original function in PyTorch.
     """
     E = log_mv_normal(x, M, L_dense, device)
@@ -96,13 +95,18 @@ def calc_logprob_save(x, ulog_T, ulog_t0, M, L_dense, device):
 def run(X: torch.tensor, lengths: list, K: int = 2, optimizer: str = 'adam', momentum: int = 0.9,
         D: int = 2, N_iter: int = 1000, reps: int = 20, lrate: float = 0.001, seed: int = 0, 
         algo: str = 'direct', M: Optional[np.ndarray] = None, Sigma: Optional[np.ndarray] = None,
-        **kwargs):
+        where: str = 'colab', **kwargs):
     """ Train an HMM model using direct optimization """
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     torch.manual_seed(seed)
     np.random.seed(seed)
+
+    if where == 'colab':
+        from tqdm.notebook import tqdm
+    else:
+        from tqdm import tqdm
 
     # check params to train
     assert optimizer in ['adam', 'SGD', 'LBFGS']
