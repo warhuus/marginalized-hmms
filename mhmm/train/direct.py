@@ -3,7 +3,7 @@ from typing import Any, Optional, List, Union
 import torch
 import numpy as np
 from hmmlearn import hmm
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 
 from .. import ops
 from . import utils
@@ -18,11 +18,11 @@ def log_mv_normal(x: torch.tensor, M: torch.tensor, L_dense: torch.tensor, devic
 
     D, N = x.shape
     K = M.shape[1]
-    log_prob = torch.empty((N, K), dtype=torch.float32, device=device)
+    log_prob = torch.empty((N, K), dtype=torch.float64, device=device)
 
     for k in range(K):
-        L = torch.zeros((D, D), dtype=torch.float32, device=device)
-        L[torch.tril(torch.ones((D, D)).to(device)) == 1] = L_dense[k]
+        L = torch.zeros((D, D), dtype=torch.float64, device=device)
+        L[torch.tril(torch.ones((D, D), dtype=torch.float64).to(device)) == 1] = L_dense[k]
 
         cv_log_det = 2 * torch.log(torch.diagonal(L)).sum()
         cv_sol = torch.triangular_solve((x.t() - M.t()[k]).t(), L,
@@ -82,8 +82,8 @@ def calc_logprob_save(x, ulog_T, ulog_t0, M, L_dense, device):
     D, K = M.shape
 
     # make hmmlearn model and fill
-    assert torch.allclose(log_T.exp().sum(0), torch.ones(M.shape[1]).to(device))
-    assert torch.allclose(log_t0.exp().sum(), torch.ones(M.shape[1]).to(device))
+    assert torch.allclose(log_T.exp().sum(0), torch.ones(M.shape[1], dtype=torch.float64).to(device))
+    assert torch.allclose(log_t0.exp().sum(), torch.ones(M.shape[1], dtype=torch.float64).to(device))
     assert L_dense.shape[0] == K
     assert utils.get_D_from_L_dense(L_dense) == D
 
@@ -109,7 +109,7 @@ def run(X: torch.tensor, lengths: list, K: int = 2, optimizer: str = 'adam', mom
     assert algo in ['mom-as-initializer', 'mom-then-direct', 'direct']
 
     # init params pars
-    par = {'requires_grad': True, 'dtype': torch.float32, 'device': device}
+    par = {'requires_grad': True, 'dtype': torch.float64, 'device': device}
     
     # transpose X for this part
     Xfull = X.clone()
@@ -130,6 +130,14 @@ def run(X: torch.tensor, lengths: list, K: int = 2, optimizer: str = 'adam', mom
     optim_pars = {'lr': lrate}
     if optimizer == 'SGD':
         optim_pars['momentum'] = momentum
+    if optimizer == 'LBFGS':
+        optim_pars['max_iter'] = 4
+
+    param_dict = dict()
+    param_dict['ulog_T'] = [[] for i in range(reps)]
+    param_dict['ulog_t0'] = [[] for i in range(reps)]
+    param_dict['M'] = [[] for i in range(reps)]
+    param_dict['L_dense'] = [[] for i in range(reps)]
 
     for r in tqdm(range(reps)):
 
@@ -168,8 +176,8 @@ def run(X: torch.tensor, lengths: list, K: int = 2, optimizer: str = 'adam', mom
                 log_T = ulog_T - ops.logsum(ulog_T)  # P[i, j] = prob FROM j TO i
                 log_t0 = ulog_t0 - ops.logsum(ulog_t0)
 
-                assert torch.allclose(log_T.exp().sum(0), torch.ones(K).to(device))
-                assert torch.allclose(log_t0.exp().sum(), torch.ones(K).to(device))
+                assert torch.allclose(log_T.exp().sum(0), torch.ones(K, dtype=torch.float64).to(device))
+                assert torch.allclose(log_t0.exp().sum(), torch.ones(K, dtype=torch.float64).to(device))
 
                 old_ulog_T = ulog_T.clone().detach().requires_grad_()
                 old_ulog_t0 = ulog_t0.clone().detach().requires_grad_()
@@ -205,10 +213,19 @@ def run(X: torch.tensor, lengths: list, K: int = 2, optimizer: str = 'adam', mom
                 # calc and save log-likelihood using hmmlearn
                 Log_like[i] += calc_logprob_save(x, ulog_T, ulog_t0, M, L_dense, device)
 
+                assert not np.isnan(Log_like[i])
+
+                param_dict['ulog_T'][r] += [ulog_T]
+                param_dict['ulog_t0'][r] += [ulog_t0]
+                param_dict['M'][r] += [M]
+                param_dict['L_dense'][r] += [L_dense]
+
             # save the best model thus far
             if Log_like[i] < min_neg_loglik:
                 min_neg_loglik = Log_like[i]
-                best_params = ulog_T, ulog_t0, old_M, old_L_dense
+                best_params = ulog_T, ulog_t0, M, L_dense
+                if torch.isnan(best_params[0]).any():
+                    hi = 3
         
         Ls[r, :] = Log_like / len(lengths)
 

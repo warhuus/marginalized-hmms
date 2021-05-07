@@ -5,11 +5,11 @@
     "K": 2,
     "N_iter": 100,
     "reps": 3,
-    "seed": 962,
-    "data_seed": 957,
+    "seed": 373,
+    "data_seed": 368,
     "plot_data": 0,
     "lrate": 0.05,
     "show": 0,
     "N_seq": 10,
-    "optimizer": "adam"
+    "optimizer": "LBFGS"
 }

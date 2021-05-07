@@ -30,8 +30,8 @@ def run(X: torch.tensor, algo: Union['viterbi', 'map'], K: int, seed: int, lengt
        # setup model
        model = hmm.GaussianHMM(K, "full", n_iter=N_iter, tol=1e-20,
                                verbose=True, algorithm=algo, init_params='')
-       model = utils.fill_hmmlearn_params(model, *utils.init_params(K, D, X=X,
-                                                                    perturb=True), device)
+       model = utils.fill_hmmlearn_params(model, *utils.init_params(
+              K, D, X=X, par={'dtype': torch.float64}, perturb=True), device)
        _ = model.fit(X, lengths)
 
        # get convergence report
@@ -56,8 +56,8 @@ def run(X: torch.tensor, algo: Union['viterbi', 'map'], K: int, seed: int, lengt
        if min_neg_loglik in Lr:
            best_model = model
 
-    log_t0 = (torch.tensor(best_model.startprob_) + 1e-20).log()
-    log_T = (torch.tensor(best_model.transmat_) + 1e-20).log().T
+    log_t0 = (torch.tensor(best_model.startprob_, dtype=torch.float64) + 1e-20).log()
+    log_T = (torch.tensor(best_model.transmat_, dtype=torch.float64) + 1e-20).log().T
     M = best_model.means_.T
     Cov = best_model.covars_
     _, state_probabilities = best_model.score_samples(X, lengths=lengths)
