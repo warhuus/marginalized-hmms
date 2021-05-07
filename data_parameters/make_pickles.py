@@ -12,12 +12,6 @@ twoD = {
     'start_probabilities': np.array([4/5, 1/5]),
     'covariances': np.array([np.eye(3) * 0.1 for i in range(2)])
 }
-    model.means_ = np.array([[3, 4],
-                             [5, 7]])
-    cov_base = np.array([[[2, 0.5],
-                          [0.5, 2]],
-                         [[1.5, -0.3],
-                          [-0.3, 4]]])
 A = {
     'transition_probabilities': np.array([
         [9/10, 1/10],

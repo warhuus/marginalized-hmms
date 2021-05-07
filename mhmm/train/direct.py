@@ -3,7 +3,7 @@ from typing import Any, Optional, List, Union
 import torch
 import numpy as np
 from hmmlearn import hmm
-from tqdm import tqdm
+from tqdm.notebook import tqdm
 
 from .. import ops
 from . import utils
@@ -65,16 +65,19 @@ def calc_logprob_optim(x, log_T, log_t0, M, L_dense, device):
     return L
 
 
-def calc_logprob_save(x, log_T, log_t0, M, L_dense, device):
+def calc_logprob_save(x, ulog_T, ulog_t0, M, L_dense, device):
     """
     Calculate the neg log-likelihood of observations under the model
     using hmmlearn.
     x: (D, N)
-    log_T: (K, K) - sum of COLUMNS should be 1
-    log_t0: (K,) - sum should be 1
+    log_T: (K, K) - unnormalized
+    log_t0: (K,) - unnormalized
     M: (D, K)
     L_dense 
     """
+
+    log_T = ulog_T - ops.logsum(ulog_T)
+    log_t0 = ulog_t0 - ops.logsum(ulog_t0)
 
     D, K = M.shape
 
@@ -90,20 +93,20 @@ def calc_logprob_save(x, log_T, log_t0, M, L_dense, device):
     return - model.score(x.detach().cpu().numpy().astype(np.float64).T)
 
 
-def run(X: torch.tensor, algo: str, K: int, optimizer: str = 'adam', momentum: Optional[float] = None,
-        lengths: Optional[List] = None, D: Optional[int] = None, N_iter: int = 1000, reps: int = 20,
-        lrate: float = 0.001, params_to_train: Union['all', 'transition_probabilities'] = 'all',
-        M: Optional[np.ndarray] = None, Sigma: Optional[np.ndarray] = None, **kwargs):
+def run(X: torch.tensor, lengths: list, K: int = 2, optimizer: str = 'adam', momentum: int = 0.9,
+        D: int = 2, N_iter: int = 1000, reps: int = 20, lrate: float = 0.001, seed: int = 0, 
+        algo: str = 'direct', M: Optional[np.ndarray] = None, Sigma: Optional[np.ndarray] = None,
+        **kwargs):
     """ Train an HMM model using direct optimization """
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+
     # check params to train
     assert optimizer in ['adam', 'SGD', 'LBFGS']
-    assert params_to_train in ['all', 'transition_probabilities']
-    if params_to_train == 'transition_probabilities':
-        assert M.shape == (D, K)
-        assert Sigma.shape == (K, D, D)
+    assert algo in ['mom-as-initializer', 'mom-then-direct', 'direct']
 
     # init params pars
     par = {'requires_grad': True, 'dtype': torch.float32, 'device': device}
@@ -123,22 +126,33 @@ def run(X: torch.tensor, algo: str, K: int, optimizer: str = 'adam', momentum: O
         'SGD': torch.optim.SGD,
         'LBFGS': torch.optim.LBFGS
     }[optimizer]
+    
+    optim_pars = {'lr': lrate}
+    if optimizer == 'SGD':
+        optim_pars['momentum'] = momentum
 
     for r in tqdm(range(reps)):
 
         # init params and optimizer
         params = utils.init_params(K, D, par, X=Xfull.T, perturb=True)
 
-        if params_to_train == 'all':
-            ulog_T, ulog_t0, M, L_dense = params
-            optimizer_ = Optimizer([ulog_T, ulog_t0, M, L_dense], lr=lrate)
+        if algo in ['mom-as-initializer', 'mom-then-direct']:
+            assert M.shape == (D, K)
+            assert Sigma.shape == (K, D, D)
 
-        else:
             ulog_T, ulog_t0, _, _ = params
-            optimizer_ = Optimizer([ulog_T, ulog_t0], lr=lrate)
-
-            M = torch.tensor(M.copy(), dtype=torch.float32)
+            M = torch.tensor(M.copy(), **par)
             L_dense = utils.cov_to_L_dense(Sigma, par)
+            params_to_optim = [ulog_T, ulog_t0]
+
+            if algo == 'mom-as-initializer':
+                params_to_optim += [M, L_dense]
+        
+        elif algo == 'direct':
+            ulog_T, ulog_t0, M, L_dense = params
+            params_to_optim = [ulog_T, ulog_t0, M, L_dense]
+        
+        optimizer_ = Optimizer(params_to_optim, **optim_pars)
 
         # Prepare log-likelihood save and loop generator
         Log_like = np.zeros(N_iter)
@@ -149,19 +163,6 @@ def run(X: torch.tensor, algo: str, K: int, optimizer: str = 'adam', momentum: O
 
                 # get sequence
                 x = Xfull[:, start:end]
-
-                if (torch.isnan(ulog_T).any() or torch.isnan(ulog_t0).any()
-                    or torch.isnan(L_dense).any() or torch.isnan(M).any()):
-
-                    ulog_T = old_ulog_T.clone().detach().requires_grad_()
-                    ulog_t0 = old_ulog_t0.clone().detach().requires_grad_()
-                    L_dense = old_L_dense.clone().detach().requires_grad_()
-                    M = old_M.clone().detach().requires_grad_()
-
-                    if params_to_train == 'all':
-                        optimizer_ = Optimizer([ulog_T, ulog_t0, M, L_dense], lr=lrate)
-                    else:
-                        optimizer_ = Optimizer([ulog_T, ulog_t0], lr=lrate)
                 
                 # normalize log transition matrix
                 log_T = ulog_T - ops.logsum(ulog_T)  # P[i, j] = prob FROM j TO i
@@ -174,9 +175,6 @@ def run(X: torch.tensor, algo: str, K: int, optimizer: str = 'adam', momentum: O
                 old_ulog_t0 = ulog_t0.clone().detach().requires_grad_()
                 old_L_dense = L_dense.clone().detach().requires_grad_()
                 old_M = M.clone().detach().requires_grad_()
-
-                # calc and save log-likelihood using hmmlearn
-                Log_like[i] += calc_logprob_save(x, log_T, log_t0, M, L_dense, device)
                 
                 if optimizer != 'LBFGS':
                     optimizer_.zero_grad()
@@ -191,25 +189,43 @@ def run(X: torch.tensor, algo: str, K: int, optimizer: str = 'adam', momentum: O
                         return Li_optim
                     optimizer_.step(closure=closure)
 
+                if (torch.isnan(ulog_T).any() or torch.isnan(ulog_t0).any()
+                    or torch.isnan(L_dense).any() or torch.isnan(M).any()):
+
+                    ulog_T = old_ulog_T.clone().detach().requires_grad_()
+                    ulog_t0 = old_ulog_t0.clone().detach().requires_grad_()
+                    L_dense = old_L_dense.clone().detach().requires_grad_()
+                    M = old_M.clone().detach().requires_grad_()
+
+                    if algo in ['direct', 'mom-as-initializer']:
+                        optimizer_ = Optimizer([ulog_T, ulog_t0, M, L_dense], **optim_pars)
+                    else:
+                        optimizer_ = Optimizer([ulog_T, ulog_t0], **optim_pars)
+
+                # calc and save log-likelihood using hmmlearn
+                Log_like[i] += calc_logprob_save(x, ulog_T, ulog_t0, M, L_dense, device)
+
             # save the best model thus far
             if Log_like[i] < min_neg_loglik:
-                old_log_T = old_ulog_T - ops.logsum(ulog_t0)
-                old_log_t0 = old_ulog_t0 - ops.logsum(ulog_t0)
                 min_neg_loglik = Log_like[i]
-                best_params = old_log_T, old_log_t0, old_M, old_L_dense
+                best_params = ulog_T, ulog_t0, old_M, old_L_dense
         
         Ls[r, :] = Log_like / len(lengths)
 
     # take observations from the best model
-    log_T, log_t0, M, L_dense = best_params
+    ulog_T, ulog_t0, M, L_dense = best_params
 
     # get covariance matrix
     Cov = utils.L_dense_to_cov(L_dense)
 
+    # normalize matrices
+    log_T = ulog_T - ops.logsum(ulog_T)  # P[i, j] = prob FROM j TO i
+    log_t0 = ulog_t0 - ops.logsum(ulog_t0)
+
     # get state probabilities - I wouldn't trust these, at least not
     # at the moment
     model_for_state_probs = utils.fill_hmmlearn_params(
-        hmm.GaussianHMM(K, 'full', algorithm=algo, init_params=''),
+        hmm.GaussianHMM(K, 'full', init_params=''),
         log_T, log_t0, M, L_dense, device
     )
     _, posteriors = model_for_state_probs.score_samples(X)

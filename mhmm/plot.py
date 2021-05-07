@@ -78,22 +78,27 @@ def plot_latest(opt):
     # setup plotting
     fig, ax = plt.subplots()
 
+    plot_average = False
     # get log-likelihood from latest files
-    colors = ['r', 'b', 'g']
+    min_y, max_y = 1e10, -1e10
+    colors = ['r', 'b', 'g', 'm']
     for i, outfile in enumerate(outfiles):
         with open(outfile, 'rb') as f:
             outdict = pickle.load(f)
-        _ = ax.plot(np.arange(outdict['Lr'].shape[1]) + 1, outdict['Lr'].mean(0),
-                    label=f"{outdict['algo']}: minimum = {round(np.nanmin(outdict['Lr']), 1)}",
-                    color=colors[i])
+        if plot_average:
+            _ = ax.plot(np.arange(outdict['log_likelihood'].shape[1]) + 1, outdict['log_likelihood'].mean(0),
+                        label=f"{outdict['algo']}-{outdict['optimizer']}:\nminimum = {round(np.nanmin(outdict['log_likelihood']), 1)}",
+                        color=colors[i])
+        min_y, max_y = min(outdict['log_likelihood'].min(), min_y), max(outdict['log_likelihood'].max(), max_y)
         
-        for r in range(outdict['Lr'].shape[0]):
-            _ = ax.plot(np.arange(outdict['Lr'].shape[1]) + 1, outdict['Lr'][r, :],
-                        color=colors[i], alpha=0.3)
-
+        for r in range(outdict['log_likelihood'].shape[0]):
+            _ = ax.plot(np.arange(outdict['log_likelihood'].shape[1]) + 1, outdict['log_likelihood'][r, :],
+                        color=colors[i], alpha=0.2,
+                        label=f"{outdict['algo']}-{outdict['optimizer']}:\nminimum = {round(np.nanmin(outdict['log_likelihood']), 1)}" if (r == 0 and not plot_average) else None)
+    ax.set_ylim([min_y - 2, max_y + 100])
     ax.legend(loc="upper right")
     ax.set_xlabel("iterations")
-    ax.set_ylabel("log-likelihood")
+    ax.set_ylabel("negative log-likelihood")
     ax.set_title((f"which-hard={outdict.get('which_hard')}, "
                   + f"lr={outdict.get('lrate')}, "
                   + f"seed={outdict.get('seed')}"))
@@ -104,6 +109,9 @@ def plot_latest(opt):
 
     plt.savefig(os.path.join(opt.outputdir, today, "plots",
         (f"hard={outdict.get('which_hard')}_lr={outdict.get('lrate')}_"
-         + f"seed={outdict.get('seed')}_reps={outdict.get('reps')}.png")
+         + f"seed={outdict.get('seed')}_reps={outdict.get('reps')}_"
+         + f"{datetime.now().strftime('%y%m%d_%H%M')}.png")
         )
     )
+
+    plt.show()

@@ -1,4 +1,4 @@
-from tqdm import tqdm
+from tqdm.notebook import tqdm
 import numpy as np
 import torch
 
@@ -21,12 +21,17 @@ def form_L(B312: List[np.ndarray], k: int, verbose: bool) -> np.ndarray:
     
     # step 2: obtain the diagonals of the matrices R3^-1 @ B312[j] @ R3
     # for all but the first entry.
-    try:
-        R3_inv = np.linalg.inv(R3)
-    except np.linalg.LinAlgError:
-        return None, None
+    if not np.isclose(np.linalg.det(R3), 0):
+        try:
+            R3_inv = np.linalg.inv(R3)
+        except np.linalg.LinAlgError:
+            if verbose:
+                print(f'failed to invert R3:\n\nR3 = {R3}\n')
+            return None, None
+    else:
         if verbose:
             print(f'failed to invert R3:\n\nR3 = {R3}\n')
+        return None, None    
 
     for i in range(1, k):
         L[i] = np.diag(R3_inv.dot(B312[i]).dot(R3))
@@ -115,7 +120,7 @@ def separate_means_and_sigma(O: np.ndarray, D: int, K: int):
         covs += [cov_k]
 
     covs_array = np.array(covs)
-    assert means.shape[1] == covs_array.shape[1]
+    assert (*reversed(means.shape), D) == covs_array.shape
 
     return means, covs_array
 
@@ -238,10 +243,13 @@ def run_algorithm_B(X: np.ndarray, k: int, verbose: bool = False) -> np.ndarray:
         return O, T
 
 
-def run(X: np.ndarray, K: int, D: int, algo: str, lengths: int, verbose: bool = False,
-        N_iter: int = 1000, pytorch_N_iter: int = 1000, reps: int = 20,
-        lrate: float = 0.001, **kwargs):
+def run(X: np.ndarray, lengths: int, K: int = 2, D: int = 2, seed: int = 0, verbose: bool = False,
+        algo: str = 'mom-then-direct', N_iter: int = 1000, reps: int = 20, lrate: float = 0.001,
+        **kwargs):
     ''' Run multiple iterations and reps of the mom algorithm '''
+
+    torch.manual_seed(seed)
+    np.random.seed(seed)
 
     assert D == X.shape[1]
     assert K <= D
@@ -249,6 +257,7 @@ def run(X: np.ndarray, K: int, D: int, algo: str, lengths: int, verbose: bool = 
     min_neg_loglik = 1e10
     
     Ls = np.empty((reps, N_iter))
+
     for r in tqdm(range(reps)):
             
         # transform X to include flattened covariances
@@ -262,13 +271,18 @@ def run(X: np.ndarray, K: int, D: int, algo: str, lengths: int, verbose: bool = 
     
         M, Sigma = separate_means_and_sigma(O, D, K)
 
-        output = direct.run(X, algo, K, lengths, D=D, N_iter=N_iter,
-                            params_to_train='transition_probabilities',
+        output = direct.run(X, lengths, D=D, K=K, N_iter=N_iter, algo=algo,
                             reps=1, lrate=lrate, M=M, Sigma=Sigma)
-        Log_like, log_T, log_t0, M_out, Cov_out, posteriors = output
+        Log_like = output['log_likelihood']
+        log_T = output['log_T']
+        log_t0 = output['log_t0']
+        M_out = output['M']
+        Cov_out = output['covariances']
+        posteriors = output['state_probabilities']
 
-        assert np.allclose(M_out, M)
-        assert np.allclose(Cov_out, Sigma)
+        if algo == 'mom-then-direct':
+            assert np.allclose(M_out, M)
+            assert np.allclose(Cov_out, Sigma)
         assert Log_like.shape == (1, N_iter)
 
         # update the minimum negative log-likelihood

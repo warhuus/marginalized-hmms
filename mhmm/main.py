@@ -34,7 +34,8 @@ def main(opt, dir=None):
         method = {'direct': train.direct.run,
                   'map': train.hmm_.run,
                   'viterbi': train.hmm_.run,
-                  'mom': train.mom_.run}[opt['algo']]
+                  'mom-as-initializer': train.mom_.run,
+                  'mom-then-direct': train.mom_.run,}[opt['algo']]
     except KeyError:
         raise NotImplementedError
 
@@ -52,10 +53,12 @@ def main(opt, dir=None):
         if not os.path.isdir(path):
             os.mkdir(path)
     except FileNotFoundError:
+        path = "output"
         if not os.path.isdir("output"):
-            os.mkdir(path)
+            os.mkdir("output")
 
-    save_name = f'{now.strftime("%H_%M_%S")}_{opt["algo"]}_{opt.get("optimizer")}.pickle'
+    save_name = (f'{now.strftime("%H_%M_%S")}_{opt["algo"]}_{opt.get("optimizer")}'
+                 + f'_{opt.get("data_seed")}.pickle')
 
     with open(os.path.join(path, save_name), 'wb') as f:
         pickle.dump({

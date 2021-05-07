@@ -5,16 +5,21 @@ from typing import Union, List, Optional
 import torch
 from hmmlearn import hmm
 import numpy as np
-from tqdm import tqdm
+from tqdm.notebook import tqdm
 
 from . import utils
 
-def run(X: torch.tensor, algo: Union['viterbi', 'map'], K: int, lengths: Optional[int],
+def run(X: torch.tensor, algo: Union['viterbi', 'map'], K: int, seed: int, lengths: Optional[int],
         D: Optional[int], N_iter: int = 1000, reps: int = 20, **kwargs):
     """ Train an HMM model using EM with hmmlearn """
 
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+
     min_neg_loglik = 1e10
     Ls = np.tile(np.nan, (reps, N_iter))
+
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     
     for r in tqdm(range(reps)):
 
@@ -26,7 +31,7 @@ def run(X: torch.tensor, algo: Union['viterbi', 'map'], K: int, lengths: Optiona
        model = hmm.GaussianHMM(K, "full", n_iter=N_iter, tol=1e-20,
                                verbose=True, algorithm=algo, init_params='')
        model = utils.fill_hmmlearn_params(model, *utils.init_params(K, D, X=X,
-                                                                    perturb=True))
+                                                                    perturb=True), device)
        _ = model.fit(X, lengths)
 
        # get convergence report

@@ -53,8 +53,11 @@ def init_params(K: int, D: int, par: dict = {}, cluster_init: bool = True,
 
     if X is not None:
         assert X.shape[1] == D
-
-    X_numpy = X.clone().detach().cpu().numpy()
+    
+    if isinstance(X, torch.Tensor):
+        X_numpy = X.clone().detach().cpu().numpy()
+    else:
+        X_numpy = X
 
     # make cluster means
     if cluster_init and X is not None:
