@@ -11,5 +11,6 @@
     "lrate": 0.05,
     "show": 0,
     "N_seq": 10,
-    "optimizer": "SGD"
+    "optimizer": "SGD",
+    "where": "local"
 }
