@@ -14,7 +14,7 @@ from . import data
 from . import train
 
 
-def main(opt, dir=None):
+def main(opt, dir_=None):
 
     # create data
     if opt.get('data') == 'hcp':
@@ -46,21 +46,9 @@ def main(opt, dir=None):
         plot.diagnostics(*output, opt['K'])
    
     # save
-    now = datetime.datetime.now()
-
-    path = os.path.join(os.getcwd(), "output", now.strftime("%m_%d"))
-    try:
-        if not os.path.isdir(path):
-            os.mkdir(path)
-    except FileNotFoundError:
-        path = "output"
-        if not os.path.isdir("output"):
-            os.mkdir("output")
-
     save_name = (f'{now.strftime("%H_%M_%S")}_{opt["algo"]}_{opt.get("optimizer")}'
                  + f'_{opt.get("data_seed")}.pickle')
-
-    with open(os.path.join(path, save_name), 'wb') as f:
+    with open(os.path.join(dir_, save_name), 'wb') as f:
         pickle.dump({
             **output,
             **opt,
