@@ -1,4 +1,5 @@
 import setuptools
+from setuptools import setup
 
 setup(
       name='mhmm',
