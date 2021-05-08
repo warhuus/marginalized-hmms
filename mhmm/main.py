@@ -47,7 +47,7 @@ def main(opt, dir_=None):
    
     # save
     now = datetime.datetime.now()
-    save_name = (f'{now.strftime("%H_%M_%S")}_{opt["algo"]}_{opt.get("optimizer") if opt["algo"] != 'viterbi' else ''}'
+    save_name = (f'{now.strftime("%H_%M_%S")}_{opt["algo"]}_{opt.get("optimizer") if opt["algo"] != "viterbi" else ""}'
                  + f'_{opt.get("data_seed")}.pickle')
 
     with open(os.path.join(dir_, save_name), 'wb') as f:
