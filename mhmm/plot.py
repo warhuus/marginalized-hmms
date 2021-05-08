@@ -66,7 +66,6 @@ def get_latest(num, outputdir):
         files = os.listdir(os.path.join(outputdir, today))
         outputdir = os.path.join(outputdir, today)
     except FileNotFoundError:
-        outputdir = 'output'
         files = os.listdir(outputdir)
     files = [name for name in files if name.endswith('.pickle')]
     files.sort()
