@@ -267,7 +267,7 @@ def run(X: np.ndarray, lengths: int, K: int = 2, D: int = 2, seed: int = 0, verb
         # run Algorithm B
         O = None
         while O is None:
-            O, _ = run_algorithm_B(X_tilde, K, verbose=True)
+            O, _ = run_algorithm_B(X_tilde, K, verbose=verbose)
     
         M, Sigma = separate_means_and_sigma(O, D, K)
 
