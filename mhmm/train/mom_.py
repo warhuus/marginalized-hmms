@@ -87,10 +87,11 @@ def transform(X: np.ndarray):
     return X_tilde
 
 
-def separate_means_and_sigma(O: np.ndarray, D: int, K: int):
+def separate_means_and_sigma(O: np.ndarray, D: int, K: int, eps: float = 1e-6):
     """
     Retreive means and sigma from the outputted O matrix of
-    emission probabilities
+    emission probabilities. eps is a tolerance value to make sure the matrix is
+    positive definite. Returns a warning if covariance matrix is not + def.
     """
     assert O.shape == (D + D*(D + 1) // 2, K)
 
@@ -117,12 +118,20 @@ def separate_means_and_sigma(O: np.ndarray, D: int, K: int):
         assert cov_k[0, 1] == covs_flat[1, k]
         assert (cov_k.T == cov_k).all()
 
+        # make sure covs are positive definite
+        if not (np.linalg.eig(cov_k)[0] > eps).all():
+            cov_k += eps
+        
+        if not (np.linalg.eig(cov_k)[0] > eps).all():
+            posdef_flag = 1
+        else:
+            posdef_flag = 0
         covs += [cov_k]
 
     covs_array = np.array(covs)
     assert (*reversed(means.shape), D) == covs_array.shape
 
-    return means, covs_array
+    return means, covs_array, posdef_flag
 
 
 def compute_top_k_singular_values(P31: np.ndarray, P32: np.ndarray, k):
@@ -245,7 +254,7 @@ def run_algorithm_B(X: np.ndarray, k: int, verbose: bool = False) -> np.ndarray:
 
 def run(X: np.ndarray, lengths: int, K: int = 2, D: int = 2, seed: int = 0, verbose: bool = False,
         algo: str = 'mom-then-direct', N_iter: int = 1000, reps: int = 20, lrate: float = 0.001,
-        **kwargs):
+        where: str = 'colab', **kwargs):
     ''' Run multiple iterations and reps of the mom algorithm '''
 
     torch.manual_seed(seed)
@@ -266,13 +275,16 @@ def run(X: np.ndarray, lengths: int, K: int = 2, D: int = 2, seed: int = 0, verb
 
         # run Algorithm B
         O = None
-        while O is None:
+        i = 0
+        while ((O is None) or posdef_flag):
             O, _ = run_algorithm_B(X_tilde, K, verbose=verbose)
-    
-        M, Sigma = separate_means_and_sigma(O, D, K)
+            M, Sigma, posdef_flag = separate_means_and_sigma(O, D, K)
+            i += 1
+            if i == 20:
+                raise np.linalg.LinAlgError
 
         output = direct.run(X, lengths, D=D, K=K, N_iter=N_iter, algo=algo,
-                            reps=1, lrate=lrate, M=M, Sigma=Sigma)
+                            reps=1, lrate=lrate, M=M, Sigma=Sigma, where=where)
         Log_like = output['log_likelihood']
         log_T = output['log_T']
         log_t0 = output['log_t0']
