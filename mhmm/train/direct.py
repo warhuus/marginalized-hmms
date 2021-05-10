@@ -137,12 +137,6 @@ def run(X: torch.tensor, lengths: list, K: int = 2, optimizer: str = 'adam', mom
     if optimizer == 'LBFGS':
         optim_pars['max_iter'] = 4
 
-    param_dict = dict()
-    param_dict['ulog_T'] = [[] for i in range(reps)]
-    param_dict['ulog_t0'] = [[] for i in range(reps)]
-    param_dict['M'] = [[] for i in range(reps)]
-    param_dict['L_dense'] = [[] for i in range(reps)]
-
     for r in tqdm(range(reps)):
 
         # init params and optimizer
@@ -218,11 +212,6 @@ def run(X: torch.tensor, lengths: list, K: int = 2, optimizer: str = 'adam', mom
                 Log_like[i] += calc_logprob_save(x, ulog_T, ulog_t0, M, L_dense, device)
 
                 assert not np.isnan(Log_like[i])
-
-                param_dict['ulog_T'][r] += [ulog_T.clone().detach()]
-                param_dict['ulog_t0'][r] += [ulog_t0.clone().detach()]
-                param_dict['M'][r] += [M.clone().detach()]
-                param_dict['L_dense'][r] += [L_dense.clone().detach()]
 
             # save the best model thus far
             if Log_like[i] < min_neg_loglik:
