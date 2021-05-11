@@ -26,8 +26,7 @@ def main(opt, dir_=None):
 
     else:
         data_dict = data.toy.create(opt, return_type='tensor')
-
-    assert data_dict['X'].shape == (opt['N']*opt['N_seq'], opt['D'])
+        assert data_dict['X'].shape == (opt['N']*opt['N_seq'], opt['D'])
 
     # train
     try:
@@ -38,20 +37,30 @@ def main(opt, dir_=None):
                   'mom-then-direct': train.mom_.run,}[opt['algo']]
     except KeyError:
         raise NotImplementedError
-
-    output = method(data_dict['X'], lengths=data.utils.make_lengths(opt), **opt)
+    
+    try:
+        output = method(data_dict['X'], lengths=data.utils.make_lengths(opt), **opt)
+    except UnboundLocalError:
+        output = method(X, lengths=data.utils.make_lengths(opt), **opt)
 
     # plot - broken for now
-    if opt['show']:
+    if opt.get('show') is not None and opt.get('show'):
         plot.diagnostics(*output, opt['K'])
    
     # save
     now = datetime.datetime.now()
-    save_name = (f'{now.strftime("%H_%M_%S")}_{opt["algo"]}_{opt.get("optimizer") if opt["algo"] != "viterbi" else ""}'
-                 + f'_{opt.get("data_seed")}.pickle')
+    save_name = (f'{now.strftime("%y_%m_%d_%H_%M_%S")}_{opt["algo"]}'
+                 + f'_{opt.get("optimizer") if opt["algo"] != "viterbi" else ""}'
+                 + f'_{opt.get("data_seed" if opt["data"] != "hcp" else "seed")}.pickle')
+
+    if dir_ is None:
+        dir_ = os.path.join(os.getcwd().split('hmm_specialkursus')[0],
+            'hmm_specialkursus', 'mhmm', 'output', now.strftime('%m_%d')
+        )
+        if not os.path.isdir(dir_):
+            os.mkdir(dir_)
 
     with open(os.path.join(dir_, save_name), 'wb') as f:
-        pickle.dump({
-            **output,
-            **opt,
-            **data_dict}, f)
+        dump_dict = {**output, **opt}
+        dump_dict = {**dump_dict, **data_dict} if opt['data'] != 'hcp' else dump_dict
+        pickle.dump(dump_dict, f)
