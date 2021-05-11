@@ -18,7 +18,7 @@ def main(opt, dir_=None):
 
     # create data
     if opt.get('data') == 'hcp':
-        Xtrain, Xvalid, Xtest = data.hcp.load(opt)
+        Xtrain, Xvalid, Xtest = data.hcp.load(opt, directory=opt.get('directory'))
         opt['subjects'] = 200 if opt.get('subjects') is None else opt['subjects']
         opt['N'] = 405
         opt['D'] = 50
