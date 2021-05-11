@@ -1,6 +1,7 @@
 #%% import
 import os
 from functools import wraps
+from typing import Optional
 
 import torch
 import numpy as np
@@ -42,7 +43,7 @@ def extract_X(func):
 @transform_X
 @extract_X
 def load(verbose: bool = False, only_ica_file: bool = True,
-         from_morten: bool = True):
+         from_morten: bool = True, directory: Optional[str] = None):
     '''
     Load HCP data from Morten. Returns dict if only_ica_file is
     True, otherwise dict of dicts.
@@ -52,7 +53,8 @@ def load(verbose: bool = False, only_ica_file: bool = True,
         raise NotImplementedError
 
     data = {}
-    for f in os.listdir(DATA_PATH):
+    path = DATA_PATH if directory is None else directory
+    for f in os.listdir(path):
 
         if only_ica_file and 'ica' not in f:
             continue
@@ -61,7 +63,7 @@ def load(verbose: bool = False, only_ica_file: bool = True,
             print(f'{f}\n__________________________\n')
 
         data[f] = {}
-        for k, v in io.loadmat(os.path.join(DATA_PATH, f)).items():
+        for k, v in io.loadmat(os.path.join(path, f)).items():
 
             if not isinstance(v, (str, bytes)) and k != '__globals__':
                 data[f] = {**data[f], k: v}
