@@ -49,7 +49,7 @@ def extract_X(func):
 @transform_X
 @extract_X
 def load(verbose: bool = False, only_ica_file: bool = True,
-         from_morten: bool = True):
+         from_morten: bool = True, directory: Optional[str] = None):
     '''
     Load HCP data from Morten. Returns dict if only_ica_file is
     True, otherwise dict of dicts.
@@ -59,7 +59,7 @@ def load(verbose: bool = False, only_ica_file: bool = True,
         raise NotImplementedError
 
     data = {}
-    path = DATA_PATH if opt.get('directory') is None else opt.get('directory')
+    path = DATA_PATH if directory is None else directory
     for f in os.listdir(path):
 
         if only_ica_file and 'ica' not in f:
