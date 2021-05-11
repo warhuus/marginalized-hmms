@@ -4,6 +4,7 @@ from functools import wraps
 from typing import Optional
 
 import torch
+from torch.utils.data import Dataset
 import numpy as np
 import scipy.io as io
 
@@ -22,13 +23,18 @@ def transform_X(func):
             X = X[np.random.default_rng(opt.get('seed')).
                   integers(0, subjects, opt.get('subjects'))]
 
-        X_long = X.reshape((len(X)*N, D))
+        assert opt['N_train'] + opt['N_valid'] + opt['N_test'] == X.shape[0]
+        
+        Xtrain = X[:opt['N_train']].reshape((opt['N_train']*N, D))
+        Xvalid = X[opt['N_train']:opt['N_valid']].reshape((opt['N_valid']*N, D))
+        Xtest = X[opt['N_valid']:opt['N_test']].reshape((opt['N_test']*N, D))
 
-        assert np.all(X[0, 0] == X_long[0])
-        assert np.all(X[1, 0] == X_long[N])
-        assert np.all(X[1, 5] == X_long[N + 5])
+        assert np.all(X[0, 0] == Xtrain[0])
+        assert np.all(X[1, 0] == Xtrain[N])
+        assert np.all(X[1, 5] == Xtrain[N + 5])
 
-        return torch.tensor(X_long, dtype=torch.float32)
+        return (torch.tensor(d, dtype=torch.float64)
+                for d in (Xtrain, Xvalid, Xtest))
     return wrapper
 
 
@@ -97,3 +103,16 @@ def compare_the_two_mat_files_from_morten():
             assert np.all(data[data_keys[1]][k2] == data[data_keys[0]][k2])
     
     return True
+
+
+class HCPData(Dataset):
+
+    def __init__(self, data, transform=None):
+        self.data = data
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        sample = self.data[idx]
+        return sample

@@ -8,9 +8,12 @@ import numpy as np
 
 from . import utils
 
-def run(X: torch.tensor, algo: Union['viterbi', 'map'], K: int, seed: int, lengths: Optional[int],
-        D: Optional[int], N_iter: int = 1000, reps: int = 20, where: str = 'colab', **kwargs):
+def run(data_dict: dict, algo: Union['viterbi', 'map'], K: int, seed: int, lengths: Optional[int],
+        D: Optional[int], N_iter: int = 1000, reps: int = 20, where: str = 'colab',  data: str = 'dummy',
+        **kwargs):
     """ Train an HMM model using EM with hmmlearn """
+
+    X = data_dict['train_data']
 
     if where == 'colab':
         from tqdm.notebook import tqdm

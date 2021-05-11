@@ -1,4 +1,3 @@
-from tqdm.notebook import tqdm
 import numpy as np
 import torch
 
@@ -252,10 +251,12 @@ def run_algorithm_B(X: np.ndarray, k: int, verbose: bool = False) -> np.ndarray:
         return O, T
 
 
-def run(X: np.ndarray, lengths: int, K: int = 2, D: int = 2, seed: int = 0, verbose: bool = False,
+def run(data_dict: dict, lengths: int, K: int = 2, D: int = 2, seed: int = 0, verbose: bool = False,
         algo: str = 'mom-then-direct', N_iter: int = 1000, reps: int = 20, lrate: float = 0.001,
-        where: str = 'colab', **kwargs):
+        where: str = 'colab', data: str = 'dummy', **kwargs):
     ''' Run multiple iterations and reps of the mom algorithm '''
+
+    X = data_dict['train_data']
 
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -267,7 +268,7 @@ def run(X: np.ndarray, lengths: int, K: int = 2, D: int = 2, seed: int = 0, verb
     
     Ls = np.empty((reps, N_iter))
 
-    for r in tqdm(range(reps)):
+    for r in range(reps):
             
         # transform X to include flattened covariances
         X_tilde = transform(X)
@@ -283,7 +284,7 @@ def run(X: np.ndarray, lengths: int, K: int = 2, D: int = 2, seed: int = 0, verb
             if i == 20:
                 raise np.linalg.LinAlgError
 
-        output = direct.run(X, lengths, D=D, K=K, N_iter=N_iter, algo=algo,
+        output = direct.run(data_dict, lengths, D=D, K=K, N_iter=N_iter, algo=algo,
                             reps=1, lrate=lrate, M=M, Sigma=Sigma, where=where)
         Log_like = output['log_likelihood']
         log_T = output['log_T']

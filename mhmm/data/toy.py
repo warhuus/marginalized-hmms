@@ -21,8 +21,8 @@ def create(opt: dict, return_type: Union['tensor', 'numpy'],
     except KeyError:
         raise NotImplementedError
     
-    data_dict['X'] = {'tensor': torch.tensor(data_dict['X'], dtype=torch.float64),
-                      'numpy': data_dict['X']}[return_type]
+    data_dict['train_data'] = {'tensor': torch.tensor(data_dict['X'], dtype=torch.float64),
+                               'numpy': data_dict['X']}[return_type]
 
     return data_dict
 

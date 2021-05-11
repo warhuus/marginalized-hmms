@@ -18,11 +18,12 @@ def main(opt, dir_=None):
 
     # create data
     if opt.get('data') == 'hcp':
-        X = data.hcp.load(opt)
+        Xtrain, Xvalid, Xtest = data.hcp.load(opt)
         opt['subjects'] = 200 if opt.get('subjects') is None else opt['subjects']
         opt['N'] = 405
         opt['D'] = 50
         opt['N_seq'] = opt.get('subjects')
+        data_dict = {'train_data': Xtrain, 'valid_data': Xvalid, 'test_data': Xtest}
 
     else:
         data_dict = data.toy.create(opt, return_type='tensor')
@@ -37,11 +38,8 @@ def main(opt, dir_=None):
                   'mom-then-direct': train.mom_.run,}[opt['algo']]
     except KeyError:
         raise NotImplementedError
-    
-    try:
-        output = method(data_dict['X'], lengths=data.utils.make_lengths(opt), **opt)
-    except UnboundLocalError:
-        output = method(X, lengths=data.utils.make_lengths(opt), **opt)
+
+    output = method(data_dict, lengths=data.utils.make_lengths(opt), **opt)
 
     # plot - broken for now
     if opt.get('show') is not None and opt.get('show'):

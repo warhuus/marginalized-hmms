@@ -1,11 +1,13 @@
 from typing import Any, Optional, List, Union
 
 import torch
+from torch.utils.data import DataLoader
 import numpy as np
 from hmmlearn import hmm
 
 from .. import ops
 from . import utils
+from ..data.hcp import HCPData
 
 
 def log_mv_normal(x: torch.tensor, M: torch.tensor, L_dense: torch.tensor, device):
@@ -92,11 +94,54 @@ def calc_logprob_save(x, ulog_T, ulog_t0, M, L_dense, device):
     return - model.score(x.detach().cpu().numpy().astype(np.float64).T)
 
 
-def run(X: torch.tensor, lengths: list, K: int = 2, optimizer: str = 'adam', momentum: int = 0.9,
+def training_step(x, ulog_T, ulog_t0, M, L_dense, device, optimizer, optimizer_, Optimizer, optim_pars):
+
+    # normalize log transition matrix
+    log_T = ulog_T - ops.logsum(ulog_T)  # P[i, j] = prob FROM j TO i
+    log_t0 = ulog_t0 - ops.logsum(ulog_t0)
+
+    old_ulog_T = ulog_T.clone().detach().requires_grad_()
+    old_ulog_t0 = ulog_t0.clone().detach().requires_grad_()
+    old_L_dense = L_dense.clone().detach().requires_grad_()
+    old_M = M.clone().detach().requires_grad_()
+    
+    if optimizer != 'LBFGS':
+        optimizer_.zero_grad()
+        Li_optim = calc_logprob_optim(x, log_T, log_t0, M, L_dense, device)
+        Li_optim.backward()
+        optimizer_.step()
+    else:
+        def closure():
+            optimizer_.zero_grad()
+            Li_optim = calc_logprob_optim(x, log_T, log_t0, M, L_dense, device)
+            Li_optim.backward(retain_graph=True)
+            return Li_optim
+        optimizer_.step(closure=closure)
+
+    if (torch.isnan(ulog_T).any() or torch.isnan(ulog_t0).any()
+        or torch.isnan(L_dense).any() or torch.isnan(M).any()):
+
+        ulog_T = old_ulog_T.clone().detach().requires_grad_()
+        ulog_t0 = old_ulog_t0.clone().detach().requires_grad_()
+        L_dense = old_L_dense.clone().detach().requires_grad_()
+        M = old_M.clone().detach().requires_grad_()
+
+        if algo in ['direct', 'mom-as-initializer']:
+            optimizer_ = Optimizer([ulog_T, ulog_t0, M, L_dense], **optim_pars)
+        else:
+            optimizer_ = Optimizer([ulog_T, ulog_t0], **optim_pars)
+        
+        return ulog_T, ulog_t0, L_dense, M, optimizer_
+
+    return ulog_T, ulog_t0, L_dense, M, optimizer_
+
+def run(data_dict: dict, lengths: list, K: int = 2, optimizer: str = 'adam', momentum: int = 0.9,
         D: int = 2, N_iter: int = 1000, reps: int = 20, lrate: float = 0.001, seed: int = 0, 
         algo: str = 'direct', M: Optional[np.ndarray] = None, Sigma: Optional[np.ndarray] = None,
-        where: str = 'colab', **kwargs):
+        where: str = 'colab',  data: str = 'dummy', bs: int = 1, **kwargs):
     """ Train an HMM model using direct optimization """
+
+    X = data_dict['train_data']
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -117,13 +162,13 @@ def run(X: torch.tensor, lengths: list, K: int = 2, optimizer: str = 'adam', mom
     
     # transpose X for this part
     Xfull = X.clone()
-    Xfull = Xfull.T.to(device)
+    Xfull = Xfull.to(device)
 
     # get log-like. measurements ready
     min_neg_loglik = 1e10
     Ls = np.empty((reps, N_iter))
 
-    assert Xfull.shape[0] == D
+    assert Xfull.shape[1] == D
 
     Optimizer = {
         'adam': torch.optim.Adam,
@@ -137,10 +182,10 @@ def run(X: torch.tensor, lengths: list, K: int = 2, optimizer: str = 'adam', mom
     if optimizer == 'LBFGS':
         optim_pars['max_iter'] = 4
 
-    for r in tqdm(range(reps)):
+    for r in range(reps):
 
         # init params and optimizer
-        params = utils.init_params(K, D, par, X=Xfull.T, perturb=True)
+        params = utils.init_params(K, D, par, X=Xfull, perturb=True)
 
         if algo in ['mom-as-initializer', 'mom-then-direct']:
             assert M.shape == (D, K)
@@ -163,53 +208,23 @@ def run(X: torch.tensor, lengths: list, K: int = 2, optimizer: str = 'adam', mom
         # Prepare log-likelihood save and loop generator
         Log_like = np.zeros(N_iter)
 
-        for i in tqdm(range(N_iter)):
+        for i in range(N_iter):
 
             for start, end in utils.make_iter(lengths):
+                
+                x = Xfull[start:end, :]
 
                 # get sequence
-                x = Xfull[:, start:end]
-                
-                # normalize log transition matrix
-                log_T = ulog_T - ops.logsum(ulog_T)  # P[i, j] = prob FROM j TO i
-                log_t0 = ulog_t0 - ops.logsum(ulog_t0)
+                loader_train = DataLoader(HCPData(x), batch_size=bs, shuffle=True)
 
-                assert torch.allclose(log_T.exp().sum(0), torch.ones(K, dtype=torch.float64).to(device))
-                assert torch.allclose(log_t0.exp().sum(), torch.ones(K, dtype=torch.float64).to(device))
-
-                old_ulog_T = ulog_T.clone().detach().requires_grad_()
-                old_ulog_t0 = ulog_t0.clone().detach().requires_grad_()
-                old_L_dense = L_dense.clone().detach().requires_grad_()
-                old_M = M.clone().detach().requires_grad_()
-                
-                if optimizer != 'LBFGS':
-                    optimizer_.zero_grad()
-                    Li_optim = calc_logprob_optim(x, log_T, log_t0, M, L_dense, device)
-                    Li_optim.backward()
-                    optimizer_.step()
-                else:
-                    def closure():
-                        optimizer_.zero_grad()
-                        Li_optim = calc_logprob_optim(x, log_T, log_t0, M, L_dense, device)
-                        Li_optim.backward(retain_graph=True)
-                        return Li_optim
-                    optimizer_.step(closure=closure)
-
-                if (torch.isnan(ulog_T).any() or torch.isnan(ulog_t0).any()
-                    or torch.isnan(L_dense).any() or torch.isnan(M).any()):
-
-                    ulog_T = old_ulog_T.clone().detach().requires_grad_()
-                    ulog_t0 = old_ulog_t0.clone().detach().requires_grad_()
-                    L_dense = old_L_dense.clone().detach().requires_grad_()
-                    M = old_M.clone().detach().requires_grad_()
-
-                    if algo in ['direct', 'mom-as-initializer']:
-                        optimizer_ = Optimizer([ulog_T, ulog_t0, M, L_dense], **optim_pars)
-                    else:
-                        optimizer_ = Optimizer([ulog_T, ulog_t0], **optim_pars)
+                for batch in tqdm(loader_train, desc=f"training rep {r}, iteration {i}"):
+                    
+                    ulog_T, ulog_t0, L_dense, M, optimizer_ = training_step(
+                        batch.T, ulog_T, ulog_t0, M, L_dense, device, optimizer, optimizer_, Optimizer, optim_pars
+                    )
 
                 # calc and save log-likelihood using hmmlearn
-                Log_like[i] += calc_logprob_save(x, ulog_T, ulog_t0, M, L_dense, device)
+                Log_like[i] += calc_logprob_save(x.T, ulog_T, ulog_t0, M, L_dense, device)
 
                 assert not np.isnan(Log_like[i])
 
@@ -220,8 +235,6 @@ def run(X: torch.tensor, lengths: list, K: int = 2, optimizer: str = 'adam', mom
                                ulog_t0.clone().detach(),
                                M.clone().detach(),
                                L_dense.clone().detach())
-                if torch.isnan(best_params[0]).any():
-                    hi = 3
         
         Ls[r, :] = Log_like / len(lengths)
 
