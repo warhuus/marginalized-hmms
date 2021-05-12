@@ -208,7 +208,7 @@ def run(data_dict: dict, lengths: list, K: int = 2, optimizer: str = 'adam', mom
         # Prepare log-likelihood save and loop generator
         Log_like = np.zeros(N_iter)
 
-        for i in range(N_iter):
+        for i in tqdm(range(N_iter), desc=f"training rep {r}"):
 
             for start, end in utils.make_iter(lengths):
                 
@@ -217,7 +217,7 @@ def run(data_dict: dict, lengths: list, K: int = 2, optimizer: str = 'adam', mom
                 # get sequence
                 loader_train = DataLoader(HCPData(x), batch_size=bs, shuffle=True)
 
-                for batch in tqdm(loader_train, desc=f"training rep {r}, iteration {i}"):
+                for batch in loader_train:
                     
                     ulog_T, ulog_t0, L_dense, M, optimizer_ = training_step(
                         batch.T, ulog_T, ulog_t0, M, L_dense, device, optimizer, optimizer_, Optimizer, optim_pars
