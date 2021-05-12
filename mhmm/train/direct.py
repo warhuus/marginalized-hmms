@@ -94,7 +94,8 @@ def calc_logprob_save(x, ulog_T, ulog_t0, M, L_dense, device):
     return - model.score(x.detach().cpu().numpy().astype(np.float64).T)
 
 
-def training_step(x, ulog_T, ulog_t0, M, L_dense, device, optimizer, optimizer_, Optimizer, optim_pars):
+def training_step(x, ulog_T, ulog_t0, M, L_dense, device, algo,
+                  optimizer, optimizer_, Optimizer, optim_pars):
 
     # normalize log transition matrix
     log_T = ulog_T - ops.logsum(ulog_T)  # P[i, j] = prob FROM j TO i
@@ -220,7 +221,8 @@ def run(data_dict: dict, lengths: list, K: int = 2, optimizer: str = 'adam', mom
                 for batch in loader_train:
                     
                     ulog_T, ulog_t0, L_dense, M, optimizer_ = training_step(
-                        batch.T, ulog_T, ulog_t0, M, L_dense, device, optimizer, optimizer_, Optimizer, optim_pars
+                        batch.T, ulog_T, ulog_t0, M, L_dense, device, algo,
+                        optimizer, optimizer_, Optimizer, optim_pars
                     )
 
                 # calc and save log-likelihood using hmmlearn
