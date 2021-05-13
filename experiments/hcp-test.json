@@ -1,10 +1,15 @@
 {
     "data": "hcp",
-    "subjects": 100,
+    "subjects": 5,
     "D": 50,
     "K": 3,
-    "N_iter": 50,
+    "N_iter": 10,
     "reps": 2,
-    "lrate": 0.05,
-    "seed": 0
+    "lrate": 0.0005,
+    "seed": 0,
+    "where": "local",
+    "bs": 64,
+    "N_train": 5,
+    "N_valid": 0,
+    "N_test": 0
 }

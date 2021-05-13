@@ -1,16 +1,16 @@
 {
     "data": "dummy",
     "N": 50,
-    "D": 20,
-    "K": 3,
-    "N_iter": 600,
+    "D": 5,
+    "K": 2,
+    "N_iter": 250,
     "reps": 3,
-    "seed": 914,
-    "data_seed": 909,
+    "seed": 28,
+    "data_seed": 23,
     "plot_data": 0,
     "lrate": 0.0005,
     "show": 0,
-    "N_seq": 10,
-    "optimizer": "LBFGS",
+    "N_seq": 20,
+    "optimizer": "adam",
     "where": "local"
 }

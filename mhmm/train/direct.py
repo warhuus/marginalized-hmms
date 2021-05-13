@@ -216,7 +216,7 @@ def run(data_dict: dict, lengths: list, K: int = 2, optimizer: str = 'adam', mom
                 x = Xfull[start:end, :]
 
                 # get sequence
-                loader_train = DataLoader(HCPData(x), batch_size=bs, shuffle=True)
+                loader_train = DataLoader(HCPData(x), batch_size=bs, shuffle=False)
 
                 for batch in loader_train:
                     
